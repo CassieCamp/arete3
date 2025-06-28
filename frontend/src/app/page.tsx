@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 
 export default function Home() {
   return (
@@ -16,16 +17,26 @@ export default function Home() {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Link href="/role-selection">
-                <Button variant="outline" className="border-midnight-indigo text-midnight-indigo hover:bg-midnight-indigo hover:text-white">
-                  Sign In
-                </Button>
-              </Link>
-              <Link href="/role-selection">
-                <Button className="bg-midnight-indigo hover:bg-midnight-indigo/90 text-white">
-                  Get Started
-                </Button>
-              </Link>
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <Button variant="outline" className="border-midnight-indigo text-midnight-indigo hover:bg-midnight-indigo hover:text-white">
+                    Sign In
+                  </Button>
+                </SignInButton>
+                <Link href="/role-selection">
+                  <Button className="bg-[#1B1E3C] hover:bg-[#1B1E3C]/90 text-white font-medium">
+                    Get Started
+                  </Button>
+                </Link>
+              </SignedOut>
+              <SignedIn>
+                <Link href="/role-selection">
+                  <Button className="bg-[#1B1E3C] hover:bg-[#1B1E3C]/90 text-white font-medium">
+                    Dashboard
+                  </Button>
+                </Link>
+                <UserButton afterSignOutUrl="/" />
+              </SignedIn>
             </div>
           </div>
         </div>
@@ -44,7 +55,7 @@ export default function Home() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link href="/role-selection">
-                <Button size="lg" className="bg-midnight-indigo hover:bg-midnight-indigo/90 text-white px-8 py-4 text-lg">
+                <Button size="lg" className="bg-[#1B1E3C] hover:bg-[#1B1E3C]/90 !text-white px-8 py-4 text-lg">
                   Transform Your Leadership
                 </Button>
               </Link>

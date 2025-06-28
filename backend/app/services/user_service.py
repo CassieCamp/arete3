@@ -42,6 +42,14 @@ class UserService:
             logger.error(f"Error getting user by Clerk ID {clerk_user_id}: {e}")
             raise
 
+    async def get_user_by_email(self, email: str) -> Optional[User]:
+        """Get user by email"""
+        try:
+            return await self.user_repository.get_user_by_email(email)
+        except Exception as e:
+            logger.error(f"Error getting user by email {email}: {e}")
+            raise
+
     async def get_user_by_id(self, user_id: str) -> Optional[User]:
         """Get user by ID"""
         try:

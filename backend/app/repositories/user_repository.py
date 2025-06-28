@@ -27,6 +27,21 @@ class UserRepository:
         user_doc = await db[self.collection_name].find_one({"clerk_user_id": clerk_user_id})
         
         if user_doc:
+            # Convert ObjectId to string for Pydantic compatibility
+            if "_id" in user_doc and user_doc["_id"]:
+                user_doc["_id"] = str(user_doc["_id"])
+            return User(**user_doc)
+        return None
+
+    async def get_user_by_email(self, email: str) -> Optional[User]:
+        """Get user by email"""
+        db = get_database()
+        user_doc = await db[self.collection_name].find_one({"email": email.lower()})
+        
+        if user_doc:
+            # Convert ObjectId to string for Pydantic compatibility
+            if "_id" in user_doc and user_doc["_id"]:
+                user_doc["_id"] = str(user_doc["_id"])
             return User(**user_doc)
         return None
 
@@ -36,6 +51,9 @@ class UserRepository:
         user_doc = await db[self.collection_name].find_one({"_id": ObjectId(user_id)})
         
         if user_doc:
+            # Convert ObjectId to string for Pydantic compatibility
+            if "_id" in user_doc and user_doc["_id"]:
+                user_doc["_id"] = str(user_doc["_id"])
             return User(**user_doc)
         return None
 

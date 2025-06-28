@@ -1,17 +1,53 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useState } from "react";
+import { useAuth as useClerkAuth } from "@clerk/nextjs";
 
 export default function RoleSelectionPage() {
   const router = useRouter();
   const { setUserRole } = useAuth();
+  const { getToken, userId } = useClerkAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleRoleSelection = (role: 'coach' | 'client') => {
-    setUserRole(role);
-    router.push(`/profile/create/${role}`);
+  const handleCoachSelection = async () => {
+    if (!userId) {
+      setError("Please sign in first");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const token = await getToken();
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/access/check-coach-authorization`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.authorized) {
+        setUserRole('coach');
+        router.push('/profile/create/coach');
+      } else {
+        setError("You are not authorized to create a coach account. Please contact support if you believe this is an error.");
+      }
+    } catch (err) {
+      setError("Failed to verify authorization. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClientSelection = () => {
+    setUserRole('client');
+    router.push('/client-invitation');
   };
 
   return (
@@ -26,43 +62,38 @@ export default function RoleSelectionPage() {
           </p>
         </div>
         
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
+        
         <div className="space-y-4">
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <CardTitle className="text-center">I'm a Coach</CardTitle>
-              <CardDescription className="text-center">
-                Help clients achieve their goals and share your expertise
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button 
-                className="w-full" 
-                onClick={() => handleRoleSelection('coach')}
-                size="lg"
-              >
-                Continue as Coach
-              </Button>
-            </CardContent>
-          </Card>
+          <Button
+            className="w-full bg-[#1B1E3C] hover:bg-[#1B1E3C]/90 !text-white"
+            onClick={handleCoachSelection}
+            size="lg"
+            disabled={isLoading}
+          >
+            {isLoading ? "Checking Authorization..." : "Coach"}
+          </Button>
 
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <CardTitle className="text-center">I'm a Client</CardTitle>
-              <CardDescription className="text-center">
-                Find the right coach and start your journey
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button 
-                className="w-full" 
-                variant="outline"
-                onClick={() => handleRoleSelection('client')}
-                size="lg"
-              >
-                Continue as Client
-              </Button>
-            </CardContent>
-          </Card>
+          <Button
+            className="w-full"
+            variant="outline"
+            onClick={handleClientSelection}
+            size="lg"
+            disabled={isLoading}
+          >
+            Client
+          </Button>
+        </div>
+        
+        <div className="text-center">
+          <p className="text-xs text-gray-500">
+            This is a beta version. Coach access is by invitation only.
+            Clients must be invited by an authorized coach.
+          </p>
         </div>
       </div>
     </div>

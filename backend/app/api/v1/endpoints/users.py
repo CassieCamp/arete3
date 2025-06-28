@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.v1.deps import get_current_user_clerk_id
 from app.services.profile_service import ProfileService
 from app.schemas.profile import ProfileResponse, ProfileCreateRequest, ProfileUpdateRequest
+from app.core.config import settings
 from typing import Dict, Any
 
 router = APIRouter()
@@ -94,3 +95,125 @@ async def create_user_profile(
         created_at=created_profile.created_at.isoformat(),
         updated_at=created_profile.updated_at.isoformat()
     )
+
+
+@router.get("/access/check-coach-authorization")
+async def check_coach_authorization(
+    clerk_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """Check if current user is authorized to be a coach"""
+    from app.services.user_service import UserService
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    user_service = UserService()
+    user = await user_service.get_user_by_clerk_id(clerk_user_id)
+    
+    logger.info(f"Checking authorization for clerk_user_id: {clerk_user_id}")
+    logger.info(f"User found: {user is not None}")
+    if user:
+        logger.info(f"User email: {user.email}")
+        logger.info(f"Whitelist emails: {settings.coach_whitelist_emails_list}")
+        logger.info(f"Email in whitelist: {user.email.lower() in settings.coach_whitelist_emails_list}")
+    
+    if not user or not user.email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"User email not found for clerk_user_id: {clerk_user_id}"
+        )
+    
+    is_authorized = user.email.lower() in settings.coach_whitelist_emails_list
+    
+    return {
+        "authorized": is_authorized,
+        "email": user.email,
+        "message": "Authorized to create coach profile" if is_authorized else "Not authorized for coach access"
+    }
+
+
+@router.post("/access/verify-coach-for-client")
+async def verify_coach_for_client(
+    request: Dict[str, Any]
+):
+    """Verify that a coach exists and is authorized (for client signup)"""
+    from app.services.user_service import UserService
+    
+    # Extract coach_email from request body
+    coach_email = request.get("coach_email")
+    if not coach_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="coach_email is required"
+        )
+    
+    # Check if coach email is in whitelist
+    if coach_email.lower() not in settings.coach_whitelist_emails_list:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Coach not found or not authorized"
+        )
+    
+    # Check if coach actually exists in our system
+    user_service = UserService()
+    coach_user = await user_service.get_user_by_email(coach_email)
+    
+    if not coach_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Coach not found in system. They may need to complete their registration first."
+        )
+    
+    # Check if coach has a profile
+    profile_service = ProfileService()
+    coach_profile = await profile_service.get_profile_by_clerk_id(coach_user.clerk_user_id)
+    
+    if not coach_profile or not coach_profile.coach_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Coach has not completed their profile setup"
+        )
+    
+    return {
+        "valid": True,
+        "coach_email": coach_email,
+        "coach_name": f"{coach_profile.first_name} {coach_profile.last_name}",
+        "message": "Coach verified successfully"
+    }
+
+
+@router.post("/dev/create-current-user")
+async def create_current_user_manually(
+    clerk_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """Development endpoint to manually create current user in database"""
+    from app.services.user_service import UserService
+    
+    user_service = UserService()
+    
+    # Check if user already exists
+    existing_user = await user_service.get_user_by_clerk_id(clerk_user_id)
+    if existing_user:
+        return {
+            "success": True,
+            "message": "User already exists",
+            "user_id": str(existing_user.id),
+            "email": existing_user.email,
+            "clerk_user_id": existing_user.clerk_user_id
+        }
+    
+    # Create user with the whitelisted email
+    # Since we know this is for testing with cassandra310+coach@gmail.com
+    user = await user_service.create_user_from_clerk(
+        clerk_user_id=clerk_user_id,
+        email="cassandra310+coach@gmail.com",
+        role="client"  # Default role
+    )
+    
+    return {
+        "success": True,
+        "message": "User created successfully",
+        "user_id": str(user.id),
+        "email": user.email,
+        "clerk_user_id": user.clerk_user_id
+    }

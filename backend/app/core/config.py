@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Optional, List
 
 
 class Settings(BaseSettings):
@@ -18,9 +18,19 @@ class Settings(BaseSettings):
     # API
     api_v1_str: str = "/api/v1"
     
+    # Beta Access Control
+    coach_whitelist_emails: str = ""
+    
     class Config:
         env_file = ".env"
         case_sensitive = False
+    
+    @property
+    def coach_whitelist_emails_list(self) -> List[str]:
+        """Convert comma-separated email string to list"""
+        if not self.coach_whitelist_emails:
+            return []
+        return [email.strip().lower() for email in self.coach_whitelist_emails.split(",") if email.strip()]
 
 
 settings = Settings()
