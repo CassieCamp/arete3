@@ -31,6 +31,18 @@ class ProfileRepository:
             return Profile(**profile_doc)
         return None
 
+    async def get_profile_by_clerk_id(self, clerk_user_id: str) -> Optional[Profile]:
+        """Get profile by Clerk user ID"""
+        db = get_database()
+        profile_doc = await db[self.collection_name].find_one({"clerk_user_id": clerk_user_id})
+        
+        if profile_doc:
+            # Convert ObjectId to string for Pydantic compatibility
+            if "_id" in profile_doc and profile_doc["_id"]:
+                profile_doc["_id"] = str(profile_doc["_id"])
+            return Profile(**profile_doc)
+        return None
+
     async def get_profile_by_id(self, profile_id: str) -> Optional[Profile]:
         """Get profile by ID"""
         db = get_database()

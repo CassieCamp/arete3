@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     
     # API
     api_v1_str: str = "/api/v1"
+    frontend_url: str = "http://localhost:3000"
     
     # Beta Access Control
     coach_whitelist_emails: str = ""

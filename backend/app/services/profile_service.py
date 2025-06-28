@@ -38,10 +38,12 @@ class ProfileService:
             # Create profile
             profile = Profile(
                 user_id=str(user.id),
+                clerk_user_id=clerk_user_id,
                 first_name=profile_data.get("first_name", ""),
                 last_name=profile_data.get("last_name", ""),
                 coach_data=coach_data,
-                client_data=client_data
+                client_data=client_data,
+                primary_organization_id=profile_data.get("primary_organization_id")
             )
 
             created_profile = await self.profile_repository.create_profile(profile)
@@ -55,6 +57,12 @@ class ProfileService:
     async def get_profile_by_clerk_id(self, clerk_user_id: str) -> Optional[Profile]:
         """Get profile by Clerk user ID"""
         try:
+            # First try to get profile directly by clerk_user_id
+            profile = await self.profile_repository.get_profile_by_clerk_id(clerk_user_id)
+            if profile:
+                return profile
+            
+            # Fallback to old method for backward compatibility
             user = await self.user_service.get_user_by_clerk_id(clerk_user_id)
             if not user:
                 return None

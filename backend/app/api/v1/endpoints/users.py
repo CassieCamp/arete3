@@ -188,6 +188,7 @@ async def create_current_user_manually(
 ):
     """Development endpoint to manually create current user in database"""
     from app.services.user_service import UserService
+    import clerk
     
     user_service = UserService()
     
@@ -202,18 +203,47 @@ async def create_current_user_manually(
             "clerk_user_id": existing_user.clerk_user_id
         }
     
-    # Create user with the whitelisted email
-    # Since we know this is for testing with cassandra310+coach@gmail.com
-    user = await user_service.create_user_from_clerk(
-        clerk_user_id=clerk_user_id,
-        email="cassandra310+coach@gmail.com",
-        role="client"  # Default role
-    )
-    
-    return {
-        "success": True,
-        "message": "User created successfully",
-        "user_id": str(user.id),
-        "email": user.email,
-        "clerk_user_id": user.clerk_user_id
-    }
+    # Get user email from Clerk
+    try:
+        clerk_client = clerk.Client(api_key=settings.clerk_secret_key)
+        clerk_user = clerk_client.users.get(clerk_user_id)
+        
+        # Get primary email
+        primary_email = None
+        if clerk_user.email_addresses:
+            for email in clerk_user.email_addresses:
+                if email.id == clerk_user.primary_email_address_id:
+                    primary_email = email.email_address
+                    break
+            
+            # Fallback to first email if primary not found
+            if not primary_email:
+                primary_email = clerk_user.email_addresses[0].email_address
+        
+        if not primary_email:
+            return {
+                "success": False,
+                "message": "No email found for user in Clerk"
+            }
+        
+        # Create user in our database
+        user = await user_service.create_user_from_clerk(
+            clerk_user_id=clerk_user_id,
+            email=primary_email,
+            role="client"  # Default role
+        )
+        
+        return {
+            "success": True,
+            "message": "User created successfully",
+            "user_id": str(user.id),
+            "email": user.email,
+            "clerk_user_id": user.clerk_user_id
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching user from Clerk: {e}")
+        return {
+            "success": False,
+            "message": f"Error creating user: {str(e)}"
+        }

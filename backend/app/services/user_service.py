@@ -12,12 +12,19 @@ class UserService:
 
     async def create_user_from_clerk(self, clerk_user_id: str, email: str, role: str) -> User:
         """Create a new user from Clerk webhook data"""
+        logger.info(f"=== UserService.create_user_from_clerk called ===")
+        logger.info(f"Parameters: clerk_user_id={clerk_user_id}, email={email}, role={role}")
+        
         try:
             # Check if user already exists
+            logger.info(f"Checking if user already exists with Clerk ID: {clerk_user_id}")
             existing_user = await self.user_repository.get_user_by_clerk_id(clerk_user_id)
+            
             if existing_user:
-                logger.info(f"User with Clerk ID {clerk_user_id} already exists")
+                logger.info(f"✅ User with Clerk ID {clerk_user_id} already exists: {existing_user}")
                 return existing_user
+            
+            logger.info("User does not exist, creating new user")
 
             # Create new user
             user = User(
@@ -25,13 +32,19 @@ class UserService:
                 email=email,
                 role=role
             )
+            logger.info(f"Created User model instance: {user}")
             
+            logger.info("Calling user_repository.create_user...")
             created_user = await self.user_repository.create_user(user)
-            logger.info(f"Created new user with Clerk ID: {clerk_user_id}")
+            logger.info(f"✅ Successfully created new user: {created_user}")
+            logger.info(f"Created user ID: {created_user.id}")
             return created_user
             
         except Exception as e:
-            logger.error(f"Error creating user from Clerk: {e}")
+            logger.error(f"❌ Error creating user from Clerk: {e}")
+            logger.error(f"Exception type: {type(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             raise
 
     async def get_user_by_clerk_id(self, clerk_user_id: str) -> Optional[User]:
