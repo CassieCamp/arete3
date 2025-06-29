@@ -73,3 +73,10 @@ logs
 # Ngrok files
 frontend/ngrok
 frontend/ngrok-v3-stable-darwin-amd64.tgz
+
+# MongoDB binaries
+backend/mongodb-macos-x86_64-7.0.4.tgz
+backend/mongodb-macos-x86_64-7.0.4/
+
+# Orchestrator task files (may contain sensitive data)
+docs/Orchestrator Tasks/
