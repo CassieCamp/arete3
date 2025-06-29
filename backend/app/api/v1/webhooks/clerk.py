@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException, status
 from app.services.user_service import UserService
+from app.services.role_service import RoleService
 from app.core.config import settings
 from app.db.mongodb import get_database
 import json
@@ -126,17 +127,21 @@ async def handle_clerk_webhook(request: Request):
                     detail="No email address found in webhook payload"
                 )
             
-            # Default role - can be updated later via profile creation
-            default_role = "client"
-            logger.info(f"Creating user with role: {default_role}")
+            # Get role from approved users configuration
+            role_service = RoleService()
+            assigned_role = role_service.get_role_for_email(primary_email)
+            
+            # Use assigned role if found, otherwise default to "client"
+            final_role = assigned_role if assigned_role else "client"
+            logger.info(f"Role assignment - Email: {primary_email}, Assigned: {assigned_role}, Final: {final_role}")
             
             # Create user
             try:
-                logger.info(f"Calling user_service.create_user_from_clerk with clerk_user_id={clerk_user_id}, email={primary_email}, role={default_role}")
+                logger.info(f"Calling user_service.create_user_from_clerk with clerk_user_id={clerk_user_id}, email={primary_email}, role={final_role}")
                 created_user = await user_service.create_user_from_clerk(
                     clerk_user_id=clerk_user_id,
                     email=primary_email,
-                    role=default_role
+                    role=final_role
                 )
                 logger.info(f"Successfully created user: {created_user}")
                 logger.info(f"User ID: {created_user.id if created_user else 'None'}")

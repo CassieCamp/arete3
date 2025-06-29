@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.endpoints.users import router as users_router
 from app.api.v1.endpoints.profiles import router as profiles_router
 from app.api.v1.endpoints.relationships import router as relationships_router
+from app.api.v1.endpoints.coaching_relationships import router as coaching_relationships_router
 from app.api.v1.webhooks.clerk import router as clerk_router
 from app.db.mongodb import connect_to_mongo, close_mongo_connection
 import logging
@@ -39,6 +40,7 @@ async def shutdown_event():
 app.include_router(users_router, prefix="/api/v1/users", tags=["users"])
 app.include_router(profiles_router, prefix="/api/v1/profiles", tags=["profiles"])
 app.include_router(relationships_router, prefix="/api/v1/relationships", tags=["relationships"])
+app.include_router(coaching_relationships_router, prefix="/api/v1/coaching-relationships", tags=["coaching-relationships"])
 app.include_router(clerk_router, prefix="/api/v1/webhooks", tags=["webhooks"])
 
 

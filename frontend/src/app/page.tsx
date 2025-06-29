@@ -23,14 +23,14 @@ export default function Home() {
                     Sign In
                   </Button>
                 </SignInButton>
-                <Link href="/role-selection">
+                <Link href="/dashboard/connections">
                   <Button className="bg-[#1B1E3C] hover:bg-[#1B1E3C]/90 text-white font-medium">
                     Get Started
                   </Button>
                 </Link>
               </SignedOut>
               <SignedIn>
-                <Link href="/role-selection">
+                <Link href="/dashboard/connections">
                   <Button className="bg-[#1B1E3C] hover:bg-[#1B1E3C]/90 text-white font-medium">
                     Dashboard
                   </Button>
@@ -54,7 +54,7 @@ export default function Home() {
               AI-enhanced coaching that accelerates leadership development and drives meaningful change in your professional journey.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link href="/role-selection">
+              <Link href="/dashboard/connections">
                 <Button size="lg" className="bg-[#1B1E3C] hover:bg-[#1B1E3C]/90 !text-white px-8 py-4 text-lg">
                   Transform Your Leadership
                 </Button>
@@ -263,7 +263,7 @@ export default function Home() {
               Excellence in executive coaching, enhanced by AI
             </p>
             <div className="flex justify-center space-x-6">
-              <Link href="/role-selection" className="text-cloud-grey hover:text-metis-gold transition-colors">
+              <Link href="/dashboard/connections" className="text-cloud-grey hover:text-metis-gold transition-colors">
                 Get Started
               </Link>
               <Link href="#features" className="text-cloud-grey hover:text-metis-gold transition-colors">

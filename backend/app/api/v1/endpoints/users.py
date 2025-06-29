@@ -8,6 +8,31 @@ from typing import Dict, Any
 router = APIRouter()
 
 
+@router.get("/me")
+async def get_current_user(
+    clerk_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """Get current user's basic information"""
+    from app.services.user_service import UserService
+    
+    user_service = UserService()
+    user = await user_service.get_user_by_clerk_id(clerk_user_id)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return {
+        "id": str(user.id),
+        "clerk_user_id": user.clerk_user_id,
+        "email": user.email,
+        "role": user.role,
+        "created_at": user.created_at.isoformat()
+    }
+
+
 @router.get("/me/profile", response_model=ProfileResponse)
 async def get_user_profile(
     clerk_user_id: str = Depends(get_current_user_clerk_id)

@@ -10,7 +10,6 @@ import { useAuth as useClerkAuth } from "@clerk/nextjs";
 
 export default function ClientInvitationPage() {
   const router = useRouter();
-  const { setUserRole } = useAuth();
   const { getToken, userId } = useClerkAuth();
   const [coachEmail, setCoachEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -47,7 +46,6 @@ export default function ClientInvitationPage() {
 
       if (response.ok && data.valid) {
         // Coach verified successfully
-        setUserRole('client');
         router.push('/profile/create/client');
       } else {
         // Handle error response
@@ -112,7 +110,7 @@ export default function ClientInvitationPage() {
             disabled={isLoading}
             className="text-sm text-gray-500 hover:text-gray-700"
           >
-            ← Back to role selection
+            ← Back
           </Button>
         </div>
         
