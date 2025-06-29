@@ -6,6 +6,8 @@ from app.api.v1.endpoints.relationships import router as relationships_router
 from app.api.v1.endpoints.coaching_relationships import router as coaching_relationships_router
 from app.api.v1.endpoints.documents import router as documents_router
 from app.api.v1.endpoints.goals import router as goals_router
+from app.api.v1.endpoints.analysis import router as analysis_router
+from app.api.v1.endpoints.session_insights import router as session_insights_router
 from app.api.v1.webhooks.clerk import router as clerk_router
 from app.db.mongodb import connect_to_mongo, close_mongo_connection
 import logging
@@ -45,6 +47,8 @@ app.include_router(relationships_router, prefix="/api/v1/relationships", tags=["
 app.include_router(coaching_relationships_router, prefix="/api/v1/coaching-relationships", tags=["coaching-relationships"])
 app.include_router(documents_router, prefix="/api/v1/documents", tags=["documents"])
 app.include_router(goals_router, prefix="/api/v1/goals", tags=["goals"])
+app.include_router(analysis_router, prefix="/api/v1/analysis", tags=["analysis"])
+app.include_router(session_insights_router, prefix="/api/v1/session-insights", tags=["session-insights"])
 app.include_router(clerk_router, prefix="/api/v1/webhooks", tags=["webhooks"])
 
 

@@ -4,6 +4,9 @@ from clerk_backend_api import Clerk
 from app.core.config import settings
 from app.services.user_service import UserService
 from app.services.role_service import RoleService
+from app.services.analysis_service import AnalysisService
+from app.repositories.baseline_repository import BaselineRepository
+from app.repositories.document_repository import DocumentRepository
 import logging
 import jwt
 from typing import Optional
@@ -163,3 +166,12 @@ async def get_current_user(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get user information"
         )
+
+
+def get_analysis_service() -> AnalysisService:
+    """
+    Get AnalysisService instance with required dependencies
+    """
+    baseline_repository = BaselineRepository()
+    document_repository = DocumentRepository()
+    return AnalysisService(baseline_repository, document_repository)

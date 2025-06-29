@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { PageHeader } from "@/components/navigation/NavigationUtils";
 
 // Types based on backend schemas
 interface CoachingRelationship {
@@ -221,17 +222,10 @@ export default function ConnectionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-extrabold text-gray-900">
-            Connection Management
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Send connection requests and manage your coaching relationships
-          </p>
-        </div>
-
+    <div>
+      <PageHeader />
+      
+      <div className="space-y-6">
         {/* Error and Success Messages */}
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
@@ -392,16 +386,6 @@ export default function ConnectionsPage() {
               )}
             </CardContent>
           </Card>
-        </div>
-
-        {/* Navigation */}
-        <div className="mt-8 text-center">
-          <Button
-            variant="outline"
-            onClick={() => router.push("/")}
-          >
-            Back to Home
-          </Button>
         </div>
       </div>
     </div>

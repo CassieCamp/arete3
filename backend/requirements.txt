@@ -11,3 +11,5 @@ openai
 PyPDF2
 python-docx
 httpx
+# AI Services
+anthropic  # Fallback AI provider

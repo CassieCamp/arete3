@@ -15,6 +15,19 @@ class Settings(BaseSettings):
     sendgrid_api_key: Optional[str] = None
     openai_api_key: Optional[str] = None
     
+    # AI Service Configuration
+    anthropic_api_key: Optional[str] = None  # New fallback option
+    ai_provider: str = "anthropic"  # Primary provider
+    ai_model: str = "claude-3-5-sonnet-20241022"  # Default model
+    ai_max_tokens: int = 4000  # Response limit
+    ai_temperature: float = 0.3  # Consistency over creativity
+    ai_timeout_seconds: int = 120  # Request timeout
+    
+    # Baseline Generation Settings
+    baseline_max_documents: int = 10  # Limit documents per baseline
+    baseline_max_text_length: int = 50000  # Character limit for analysis
+    baseline_prompt_version: str = "v1.0"  # For tracking prompt iterations
+    
     # API
     api_v1_str: str = "/api/v1"
     frontend_url: str = "http://localhost:3000"

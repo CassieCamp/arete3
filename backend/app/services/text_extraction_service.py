@@ -3,6 +3,8 @@ import logging
 from typing import Optional
 import PyPDF2
 from docx import Document as DocxDocument
+import io
+import tempfile
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +63,73 @@ class TextExtractionService:
             
         except Exception as e:
             error_msg = f"Error extracting text from {file_path}: {str(e)}"
+            logger.error(error_msg)
+            logger.error(f"Exception type: {type(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise Exception(error_msg) from e
+    
+    async def extract_text_from_bytes(self, file_content: bytes, filename: str) -> str:
+        """
+        Extract text content from file bytes based on filename extension.
+        
+        Args:
+            file_content: Raw bytes of the file
+            filename: Name of the file (used to determine file type)
+            
+        Returns:
+            str: Extracted text content
+            
+        Raises:
+            ValueError: If file type is not supported
+            Exception: For other processing errors
+        """
+        logger.info(f"=== TextExtractionService.extract_text_from_bytes called ===")
+        logger.info(f"filename: {filename}, content_size: {len(file_content)} bytes")
+        
+        # Determine file type from filename extension
+        file_extension = filename.lower().split('.')[-1] if '.' in filename else 'txt'
+        
+        # Map common extensions to our supported types
+        extension_mapping = {
+            'pdf': 'pdf',
+            'docx': 'docx',
+            'doc': 'docx',  # Treat .doc as .docx (limited support)
+            'txt': 'txt',
+            'text': 'txt'
+        }
+        
+        file_type = extension_mapping.get(file_extension, 'txt')
+        
+        # Check if file type is supported
+        if file_type not in self.supported_types:
+            error_msg = f"Unsupported file type: {file_type}. Supported types: {list(self.supported_types.keys())}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        try:
+            # Create a temporary file to work with existing extraction methods
+            with tempfile.NamedTemporaryFile(suffix=f'.{file_extension}', delete=False) as temp_file:
+                temp_file.write(file_content)
+                temp_file_path = temp_file.name
+            
+            try:
+                # Extract text using the appropriate method
+                extraction_method = self.supported_types[file_type]
+                extracted_text = extraction_method(temp_file_path)
+                
+                logger.info(f"✅ Successfully extracted {len(extracted_text)} characters from {filename}")
+                return extracted_text
+                
+            finally:
+                # Clean up temporary file
+                try:
+                    os.unlink(temp_file_path)
+                except Exception as cleanup_error:
+                    logger.warning(f"Failed to cleanup temporary file {temp_file_path}: {cleanup_error}")
+                    
+        except Exception as e:
+            error_msg = f"Error extracting text from {filename}: {str(e)}"
             logger.error(error_msg)
             logger.error(f"Exception type: {type(e)}")
             import traceback

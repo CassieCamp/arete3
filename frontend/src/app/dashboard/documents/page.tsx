@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { BaselineGenerator } from "@/components/baseline/BaselineGenerator";
+import { BaselineDisplay } from "@/components/baseline/BaselineDisplay";
+import { PageHeader } from "@/components/navigation/NavigationUtils";
 
 interface Document {
   id: string;
@@ -43,6 +46,8 @@ export default function DocumentLibraryPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'documents' | 'baseline'>('documents');
+  const [showGenerator, setShowGenerator] = useState(false);
 
   const fetchDocuments = async () => {
     try {
@@ -123,140 +128,190 @@ export default function DocumentLibraryPage() {
     }
   };
 
+  const handleBaselineGenerated = () => {
+    setShowGenerator(false);
+    setViewMode('baseline');
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading your documents...</p>
-          </div>
+      <div>
+        <PageHeader />
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your documents...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-extrabold text-gray-900">
-            Document Library
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Manage and view your uploaded documents
-          </p>
-        </div>
+    <div>
+      <PageHeader />
+      <div className="space-y-6">
 
-        {/* Action Bar */}
-        <div className="mb-6 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <p className="text-sm text-gray-600">
-              {documents.length} document{documents.length !== 1 ? 's' : ''} total
-            </p>
-          </div>
-          <Button 
-            onClick={() => router.push('/dashboard/documents/upload')}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            Upload New Document
-          </Button>
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 text-red-800 border border-red-200 rounded-md">
-            <p className="font-medium">Error loading documents</p>
-            <p className="text-sm">{error}</p>
-            <Button 
-              onClick={fetchDocuments}
-              variant="outline"
-              size="sm"
-              className="mt-2"
+        {/* View Toggle */}
+        <div className="mb-6 flex justify-center">
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('documents')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'documents'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
             >
-              Try Again
-            </Button>
+              Documents
+            </button>
+            <button
+              onClick={() => setViewMode('baseline')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'baseline'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Baseline Analysis
+            </button>
           </div>
-        )}
+        </div>
 
-        {/* Documents Grid */}
-        {documents.length === 0 && !error ? (
-          <Card>
-            <CardContent className="text-center py-12">
-              <div className="text-6xl mb-4">📁</div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No documents yet
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Upload your first document to get started with AI-enhanced coaching insights.
-              </p>
-              <Button 
+        {viewMode === 'documents' && (
+          <>
+            {/* Action Bar */}
+            <div className="mb-6 flex justify-between items-center">
+              <div className="flex items-center space-x-4">
+                <p className="text-sm text-gray-600">
+                  {documents.length} document{documents.length !== 1 ? 's' : ''} total
+                </p>
+              </div>
+              <Button
                 onClick={() => router.push('/dashboard/documents/upload')}
                 className="bg-blue-600 hover:bg-blue-700"
               >
-                Upload Your First Document
+                Upload New Document
               </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {documents.map((document) => (
-              <Card key={document.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-2xl">{getFileTypeIcon(document.file_type)}</span>
-                      <div className="min-w-0 flex-1">
-                        <CardTitle className="text-sm font-medium text-gray-900 truncate">
-                          {document.file_name}
-                        </CardTitle>
-                        <CardDescription className="text-xs">
-                          {getCategoryLabel(document.category)}
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      document.is_processed 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {document.is_processed ? 'Processed' : 'Processing'}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex justify-between">
-                      <span>Size:</span>
-                      <span>{formatFileSize(document.file_size)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Type:</span>
-                      <span className="uppercase">{document.file_type}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Uploaded:</span>
-                      <span>{formatDate(document.created_at)}</span>
-                    </div>
-                    {document.description && (
-                      <div className="pt-2 border-t">
-                        <p className="text-xs text-gray-500 line-clamp-2">
-                          {document.description}
-                        </p>
-                      </div>
-                    )}
-                    {document.processing_error && (
-                      <div className="pt-2 border-t">
-                        <p className="text-xs text-red-600">
-                          Processing error: {document.processing_error}
-                        </p>
-                      </div>
-                    )}
-                  </div>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 text-red-800 border border-red-200 rounded-md">
+                <p className="font-medium">Error loading documents</p>
+                <p className="text-sm">{error}</p>
+                <Button
+                  onClick={fetchDocuments}
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                >
+                  Try Again
+                </Button>
+              </div>
+            )}
+
+            {/* Documents Grid */}
+            {documents.length === 0 && !error ? (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <div className="text-6xl mb-4">📁</div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No documents yet
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    Upload your first document to get started with AI-enhanced coaching insights.
+                  </p>
+                  <Button
+                    onClick={() => router.push('/dashboard/documents/upload')}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Upload Your First Document
+                  </Button>
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {documents.map((document) => (
+                  <Card key={document.id} className="hover:shadow-lg transition-shadow">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-2xl">{getFileTypeIcon(document.file_type)}</span>
+                          <div className="min-w-0 flex-1">
+                            <CardTitle className="text-sm font-medium text-gray-900 truncate">
+                              {document.file_name}
+                            </CardTitle>
+                            <CardDescription className="text-xs">
+                              {getCategoryLabel(document.category)}
+                            </CardDescription>
+                          </div>
+                        </div>
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          document.is_processed
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {document.is_processed ? 'Processed' : 'Processing'}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-2 text-sm text-gray-600">
+                        <div className="flex justify-between">
+                          <span>Size:</span>
+                          <span>{formatFileSize(document.file_size)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Type:</span>
+                          <span className="uppercase">{document.file_type}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Uploaded:</span>
+                          <span>{formatDate(document.created_at)}</span>
+                        </div>
+                        {document.description && (
+                          <div className="pt-2 border-t">
+                            <p className="text-xs text-gray-500 line-clamp-2">
+                              {document.description}
+                            </p>
+                          </div>
+                        )}
+                        {document.processing_error && (
+                          <div className="pt-2 border-t">
+                            <p className="text-xs text-red-600">
+                              Processing error: {document.processing_error}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {viewMode === 'baseline' && (
+          <div className="space-y-6">
+            {showGenerator ? (
+              <BaselineGenerator onBaselineGenerated={handleBaselineGenerated} />
+            ) : (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-semibold text-gray-900">
+                    AI Baseline Analysis
+                  </h3>
+                  <Button
+                    onClick={() => setShowGenerator(true)}
+                    variant="outline"
+                    className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                  >
+                    Generate New Baseline
+                  </Button>
+                </div>
+                <BaselineDisplay />
+              </div>
+            )}
           </div>
         )}
       </div>

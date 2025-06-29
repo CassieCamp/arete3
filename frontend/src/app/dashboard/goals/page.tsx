@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
+import { PageHeader } from "@/components/navigation/NavigationUtils";
 
 // Types based on the backend schemas
 interface Goal {
@@ -300,17 +301,9 @@ export default function GoalsDashboardPage() {
   const celebratingGoals = goals.filter(goal => goal.progress_emoji === '🎉' || goal.status === 'completed');
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-extrabold text-gray-900">
-            Goal Management Dashboard
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Track your progress with the human-centered approach
-          </p>
-        </div>
+    <div>
+      <PageHeader />
+      <div className="space-y-6">
 
         {/* Error Message */}
         {error && (
