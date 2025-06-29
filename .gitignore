@@ -70,3 +70,6 @@ Thumbs.db
 # Logs
 logs
 *.log
+# Ngrok files
+frontend/ngrok
+frontend/ngrok-v3-stable-darwin-amd64.tgz
