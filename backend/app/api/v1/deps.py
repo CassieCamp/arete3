@@ -130,3 +130,36 @@ async def get_current_user_clerk_id_optional(
         return await get_current_user_clerk_id(credentials)
     except HTTPException:
         return None
+
+
+async def get_current_user(
+    clerk_user_id: str = Depends(get_current_user_clerk_id)
+) -> dict:
+    """
+    Get current user information including user_id from backend database
+    """
+    try:
+        user_service = UserService()
+        user = await user_service.get_user_by_clerk_id(clerk_user_id)
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found in backend database"
+            )
+        
+        return {
+            "user_id": str(user.id),
+            "clerk_user_id": clerk_user_id,
+            "email": user.email,
+            "role": user.role
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting current user: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get user information"
+        )
