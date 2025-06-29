@@ -2,44 +2,15 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/navigation/NavigationUtils';
-import { Users, FileText, Target, Brain, Plus } from 'lucide-react';
-import Link from 'next/link';
+import { QuickActionsWidget } from '@/components/dashboard/QuickActionsWidget';
+import { ProgressOverviewWidget } from '@/components/dashboard/ProgressOverviewWidget';
+import { DashboardWidget } from '@/components/dashboard/DashboardWidget';
+import { Brain, Activity, TrendingUp, Calendar } from 'lucide-react';
 
 export default function DashboardPage() {
   const { user } = useAuth();
-
-  const quickActions = [
-    {
-      title: 'Manage Connections',
-      description: 'View and manage your coaching relationships',
-      href: '/dashboard/connections',
-      icon: Users,
-      color: 'bg-blue-500'
-    },
-    {
-      title: 'Upload Documents',
-      description: 'Add new documents for analysis',
-      href: '/dashboard/documents/upload',
-      icon: FileText,
-      color: 'bg-green-500'
-    },
-    {
-      title: 'Set Goals',
-      description: 'Create and track your goals',
-      href: '/dashboard/goals',
-      icon: Target,
-      color: 'bg-purple-500'
-    },
-    {
-      title: 'View Insights',
-      description: 'Explore AI-powered session insights',
-      href: '/dashboard/insights',
-      icon: Brain,
-      color: 'bg-orange-500'
-    }
-  ];
+  const userRole = (user?.role as 'coach' | 'client') || 'client';
 
   return (
     <div>
@@ -51,7 +22,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>Welcome back, {user?.firstName}!</CardTitle>
             <CardDescription>
-              {user?.role === 'coach' 
+              {userRole === 'coach'
                 ? 'Manage your clients and track their progress with AI-enhanced insights.'
                 : 'Continue your growth journey with personalized coaching and insights.'
               }
@@ -59,46 +30,116 @@ export default function DashboardPage() {
           </CardHeader>
         </Card>
 
-        {/* Quick Actions */}
-        <div>
-          <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {quickActions.map((action) => (
-              <Link key={action.title} href={action.href}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardContent className="p-6">
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded-lg ${action.color}`}>
-                        <action.icon className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium">{action.title}</h3>
-                        <p className="text-sm text-muted-foreground">{action.description}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+        {/* Dashboard Widgets Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Quick Actions Widget */}
+          <QuickActionsWidget
+            userRole={userRole}
+            maxActions={4}
+            className="lg:col-span-2"
+          />
+
+          {/* Progress Overview Widget */}
+          <ProgressOverviewWidget
+            userRole={userRole}
+            compact={true}
+            className="lg:col-span-2"
+          />
+
+          {/* Recent Activity Widget */}
+          <DashboardWidget
+            title="Recent Activity"
+            description="Your latest coaching activities"
+            icon={Activity}
+            size="lg"
+            className="lg:col-span-2"
+          >
+            <div className="space-y-3">
+              <ActivityItem
+                icon={Brain}
+                title="New insight generated"
+                description="AI analysis completed for recent session"
+                time="2 hours ago"
+              />
+              <ActivityItem
+                icon={TrendingUp}
+                title="Goal progress updated"
+                description="Made progress on communication skills"
+                time="1 day ago"
+              />
+              <ActivityItem
+                icon={Calendar}
+                title="Session scheduled"
+                description="Next coaching session booked"
+                time="2 days ago"
+              />
+            </div>
+          </DashboardWidget>
+
+          {/* Upcoming Events Widget */}
+          <DashboardWidget
+            title="Upcoming"
+            description="Your schedule"
+            icon={Calendar}
+            size="md"
+            className="lg:col-span-2"
+          >
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-lg border">
+                <div>
+                  <p className="font-medium text-sm">Coaching Session</p>
+                  <p className="text-xs text-muted-foreground">
+                    {userRole === 'coach' ? 'with Sarah Johnson' : 'with Coach Mike'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium">Tomorrow</p>
+                  <p className="text-xs text-muted-foreground">2:00 PM</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg border">
+                <div>
+                  <p className="font-medium text-sm">Goal Review</p>
+                  <p className="text-xs text-muted-foreground">Monthly check-in</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium">Friday</p>
+                  <p className="text-xs text-muted-foreground">10:00 AM</p>
+                </div>
+              </div>
+            </div>
+          </DashboardWidget>
         </div>
 
-        {/* Recent Activity Placeholder */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>
-              Your latest coaching activities and insights
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-muted-foreground">
-              <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No recent activity to display</p>
-              <p className="text-sm">Start by connecting with others or uploading documents</p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Full Progress Overview for larger screens */}
+        <div className="hidden xl:block">
+          <ProgressOverviewWidget
+            userRole={userRole}
+            compact={false}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface ActivityItemProps {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+  time: string;
+}
+
+function ActivityItem({ icon: Icon, title, description, time }: ActivityItemProps) {
+  return (
+    <div className="flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/50 transition-colors">
+      <div className="p-1.5 rounded bg-primary/10 mt-0.5">
+        <Icon className="h-3 w-3 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm">{title}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+        <p className="text-xs text-muted-foreground mt-1">{time}</p>
       </div>
     </div>
   );
