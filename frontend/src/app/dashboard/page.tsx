@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/navigation/NavigationUtils';
@@ -8,9 +9,54 @@ import { ProgressOverviewWidget } from '@/components/dashboard/ProgressOverviewW
 import { DashboardWidget } from '@/components/dashboard/DashboardWidget';
 import { Brain, Activity, TrendingUp, Calendar } from 'lucide-react';
 
+interface DashboardData {
+  overview: any;
+  recent_activity: any[];
+  client_progress?: any[];
+  relationship_health?: any;
+  goal_progress?: any;
+  coaching_journey?: any;
+}
+
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, getAuthToken } = useAuth();
   const userRole = (user?.role as 'coach' | 'client') || 'client';
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const token = await getAuthToken();
+      const response = await fetch('/api/v1/dashboard/analytics', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard data');
+      }
+
+      const result = await response.json();
+      setDashboardData(result.data);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div>
