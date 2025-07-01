@@ -4,11 +4,26 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function Home() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -58,16 +73,29 @@ export default function Home() {
                     Sign In
                   </Button>
                 </SignInButton>
-                <div className="relative group">
-                  <Button className="bg-[#1B1E3C] hover:bg-[#1B1E3C]/90 text-white font-medium">
+                <div className="relative" ref={dropdownRef}>
+                  <Button
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="bg-[#1B1E3C] hover:bg-[#1B1E3C]/90 text-white font-medium"
+                  >
                     Join Waitlist ▾
                   </Button>
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <div className={`absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg transition-all duration-200 z-50 ${
+                    isDropdownOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
+                  }`}>
                     <div className="py-1">
-                      <Link href="/waitlist/client" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <Link
+                        href="/waitlist/client"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsDropdownOpen(false)}
+                      >
                         Join as Client
                       </Link>
-                      <Link href="/waitlist/coach" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <Link
+                        href="/waitlist/coach"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsDropdownOpen(false)}
+                      >
                         Join as Coach
                       </Link>
                     </div>
@@ -87,15 +115,17 @@ export default function Home() {
         </div>
       </nav>
       {/* Hero Section */}
-      <section className="relative py-12 lg:py-20">
+      <section className="relative py-14 lg:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-midnight-indigo mb-6">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-bold text-midnight-indigo mb-16">
               Your partner in
               <span className="block text-metis-gold">executive transformation</span>
             </h1>
-            <p className="text-xl md:text-2xl text-owlet-teal mb-8 max-w-3xl mx-auto leading-relaxed">
-              Excellence isn't perfection. It's the courage to become who you're truly meant to be. The ancient Greeks called this arete—your highest potential realized. We believe coaching should be as normal for leaders as it is for athletes. Enter your human executive coach. Our role is simple: honor that sacred relationship by providing AI that gently amplifies the wisdom, never replacing the human connection that drives real growth.
+            <p className="text-base md:text-lg text-owlet-teal mb-12 max-w-3xl mx-auto leading-loose text-left px-8">
+              Excellence isn't perfection. It's the courage to become who you're truly meant to be. The ancient Greeks called this arete—your highest potential realized. That depth of courage deserves a guide who understands the journey.
+              <br /><br />
+              We believe coaching should be as normal for leaders as it is for athletes. Enter your human executive coach. Our role is simple: honor that sacred relationship by providing AI that gently amplifies the wisdom, never replacing the human connection that drives real growth.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link href="/waitlist/client">

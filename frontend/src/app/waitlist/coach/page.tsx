@@ -17,8 +17,8 @@ export default function CoachWaitlistPage() {
               <ArrowLeft className="w-4 h-4" />
               <span>Back to Homepage</span>
             </Link>
-            <h1 className="text-xl font-serif font-bold text-midnight-indigo">
-              Arete Coach Waitlist
+            <h1 className="text-xl font-medium text-midnight-indigo">
+              Coach Waitlist
             </h1>
           </div>
         </div>
@@ -32,7 +32,7 @@ export default function CoachWaitlistPage() {
               <h1 className="text-4xl font-serif font-bold text-midnight-indigo mb-4">
                 Partner with Arete as an Executive Coach
               </h1>
-              <p className="text-xl text-owlet-teal leading-relaxed">
+              <p className="text-xl text-owlet-teal leading-loose">
                 Join our exclusive network of executive coaches and enhance your practice with AI-powered insights.
               </p>
             </div>
