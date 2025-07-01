@@ -29,9 +29,6 @@ export default function ClientWaitlistPage() {
           <h1 className="text-3xl md:text-4xl font-serif font-bold text-midnight-indigo mb-4">
             Transform Your Leadership Journey
           </h1>
-          <p className="text-lg md:text-xl text-owlet-teal leading-loose">
-            Join the waitlist for AI-enhanced executive coaching that accelerates your professional development.
-          </p>
         </div>
 
         <Card className="border-cloud-grey/30 shadow-lg">
