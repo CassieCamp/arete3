@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useNavigation } from './NavigationProvider';
 import { NavigationSection } from '@/config/navigation';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { cn } from '@/lib/utils';
 
 export default function DashboardNav() {
@@ -70,7 +71,9 @@ export default function DashboardNav() {
                 
                 <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-card px-6 pb-2 ring-1 ring-white/10">
                   <div className="flex h-16 shrink-0 items-center">
-                    <div className="text-xl font-bold text-primary">Arete</div>
+                    <Link href="/" className="text-xl font-serif font-bold text-primary hover:text-primary/80 transition-colors">
+                      Arete
+                    </Link>
                   </div>
                   <NavigationContent navigation={navigation} pathname={pathname} userRole={userRole} />
                 </div>
@@ -83,8 +86,11 @@ export default function DashboardNav() {
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
         <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-card px-6 border-r border-border">
-          <div className="flex h-16 shrink-0 items-center">
-            <div className="text-xl font-bold text-primary">Arete</div>
+          <div className="flex h-16 shrink-0 items-center justify-between">
+            <Link href="/" className="text-xl font-serif font-bold text-primary hover:text-primary/80 transition-colors">
+              Arete
+            </Link>
+            <NotificationBell />
           </div>
           <NavigationContent navigation={navigation} pathname={pathname} userRole={userRole} />
         </div>
@@ -102,6 +108,7 @@ export default function DashboardNav() {
         <div className="flex-1 text-sm font-semibold leading-6 text-foreground">
           Dashboard
         </div>
+        <NotificationBell />
         <div className="text-xs text-muted-foreground capitalize">
           {userRole}
         </div>

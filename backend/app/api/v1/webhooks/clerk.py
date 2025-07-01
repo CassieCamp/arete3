@@ -133,7 +133,18 @@ async def handle_clerk_webhook(request: Request):
             
             # Use assigned role if found, otherwise default to "client"
             final_role = assigned_role if assigned_role else "client"
-            logger.info(f"Role assignment - Email: {primary_email}, Assigned: {assigned_role}, Final: {final_role}")
+            
+            # Enhanced logging for role assignment
+            logger.info(f"=== ROLE ASSIGNMENT PROCESS ===")
+            logger.info(f"Email: {primary_email}")
+            logger.info(f"Assigned role from config: {assigned_role}")
+            logger.info(f"Final role: {final_role}")
+            
+            if assigned_role:
+                logger.info(f"✅ User {primary_email} found in approved users with role: {assigned_role}")
+            else:
+                logger.info(f"⚠️ User {primary_email} NOT found in approved users, defaulting to: {final_role}")
+                logger.info("This user may have signed up without being on the waitlist or approved")
             
             # Create user
             try:

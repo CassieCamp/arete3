@@ -1,23 +1,33 @@
 "use client";
 
-import React from 'react';
+import { ReactNode } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LucideIcon, MoreHorizontal, RefreshCw } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { LucideIcon } from 'lucide-react';
+
+export interface Metric {
+  label: string;
+  value: string | number;
+  change?: string;
+  trend?: 'up' | 'down' | 'neutral';
+}
 
 export interface DashboardWidgetProps {
   title: string;
   description?: string;
   icon?: LucideIcon;
-  children: React.ReactNode;
+  children: ReactNode;
+  actions?: {
+    label: string;
+    href?: string;
+    onClick?: () => void;
+    variant?: 'default' | 'outline' | 'ghost';
+  }[];
   className?: string;
   loading?: boolean;
   error?: string;
-  onRefresh?: () => void;
-  actions?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
-  variant?: 'default' | 'outline' | 'secondary';
+  onRefresh?: () => void;
 }
 
 export function DashboardWidget({
@@ -25,187 +35,108 @@ export function DashboardWidget({
   description,
   icon: Icon,
   children,
-  className,
-  loading = false,
-  error,
-  onRefresh,
   actions,
-  size = 'md',
-  variant = 'default'
+  className,
+  loading,
+  error,
+  size = 'md'
 }: DashboardWidgetProps) {
-  const sizeClasses = {
-    sm: 'col-span-1',
-    md: 'col-span-1 md:col-span-2',
-    lg: 'col-span-1 md:col-span-2 lg:col-span-3',
-    xl: 'col-span-1 md:col-span-2 lg:col-span-4'
-  };
-
-  const variantClasses = {
-    default: '',
-    outline: 'border-2',
-    secondary: 'bg-secondary'
-  };
-
-  return (
-    <Card className={cn(
-      sizeClasses[size],
-      variantClasses[variant],
-      'transition-all duration-200 hover:shadow-md',
-      className
-    )}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className="flex items-center space-x-2">
-          {Icon && (
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Icon className="h-4 w-4 text-primary" />
-            </div>
-          )}
-          <div>
-            <CardTitle className="text-sm font-medium">{title}</CardTitle>
-            {description && (
-              <CardDescription className="text-xs">{description}</CardDescription>
-            )}
+  if (loading) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <div className="flex items-center space-x-2">
+            {Icon && <Icon className="h-5 w-5 text-muted-foreground" />}
+            <div className="h-5 w-32 bg-muted animate-pulse rounded" />
           </div>
-        </div>
-        
-        <div className="flex items-center space-x-1">
-          {onRefresh && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={onRefresh}
-              disabled={loading}
-            >
-              <RefreshCw className={cn(
-                "h-4 w-4",
-                loading && "animate-spin"
-              )} />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <div className="h-4 w-full bg-muted animate-pulse rounded" />
+            <div className="h-4 w-3/4 bg-muted animate-pulse rounded" />
+            <div className="h-4 w-1/2 bg-muted animate-pulse rounded" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <div className="flex items-center space-x-2">
+            {Icon && <Icon className="h-5 w-5 text-muted-foreground" />}
+            <CardTitle className="text-lg">{title}</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-4">
+            <p className="text-sm text-red-600">{error}</p>
+            <Button variant="outline" size="sm" className="mt-2">
+              Retry
             </Button>
-          )}
-          {actions}
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        {error ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="text-destructive text-sm mb-2">Error loading data</div>
-            <div className="text-xs text-muted-foreground mb-4">{error}</div>
-            {onRefresh && (
-              <Button variant="outline" size="sm" onClick={onRefresh}>
-                Try Again
-              </Button>
-            )}
           </div>
-        ) : loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="flex items-center space-x-2">
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              <span className="text-sm text-muted-foreground">Loading...</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            {Icon && <Icon className="h-5 w-5 text-muted-foreground" />}
+            <div>
+              <CardTitle className={`${size === 'sm' ? 'text-base' : size === 'lg' ? 'text-xl' : size === 'xl' ? 'text-2xl' : 'text-lg'}`}>
+                {title}
+              </CardTitle>
+              {description && <CardDescription>{description}</CardDescription>}
             </div>
           </div>
-        ) : (
-          children
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// Skeleton component for loading states
-export function DashboardWidgetSkeleton({ 
-  size = 'md',
-  className 
-}: { 
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  className?: string;
-}) {
-  const sizeClasses = {
-    sm: 'col-span-1',
-    md: 'col-span-1 md:col-span-2',
-    lg: 'col-span-1 md:col-span-2 lg:col-span-3',
-    xl: 'col-span-1 md:col-span-2 lg:col-span-4'
-  };
-
-  return (
-    <Card className={cn(sizeClasses[size], className)}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className="flex items-center space-x-2">
-          <div className="h-8 w-8 bg-muted animate-pulse rounded-lg" />
-          <div>
-            <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-            <div className="h-3 w-32 bg-muted animate-pulse rounded mt-1" />
-          </div>
+          {actions && actions.length > 0 && (
+            <div className="flex space-x-2">
+              {actions.map((action, index) => (
+                <Button
+                  key={index}
+                  variant={action.variant || 'outline'}
+                  size="sm"
+                  onClick={action.onClick}
+                  asChild={!!action.href}
+                >
+                  {action.href ? (
+                    <a href={action.href}>{action.label}</a>
+                  ) : (
+                    action.label
+                  )}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="h-8 w-8 bg-muted animate-pulse rounded" />
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          <div className="h-4 w-full bg-muted animate-pulse rounded" />
-          <div className="h-4 w-3/4 bg-muted animate-pulse rounded" />
-          <div className="h-4 w-1/2 bg-muted animate-pulse rounded" />
-        </div>
+        {children}
       </CardContent>
     </Card>
   );
 }
 
-// Metric display component for widgets
-export interface MetricProps {
-  label: string;
-  value: string | number;
-  change?: {
-    value: number;
-    type: 'increase' | 'decrease' | 'neutral';
-  };
-  icon?: LucideIcon;
-  className?: string;
-}
-
-export function Metric({ 
-  label, 
-  value, 
-  change, 
-  icon: Icon,
-  className 
-}: MetricProps) {
-  const getChangeColor = (type: 'increase' | 'decrease' | 'neutral') => {
-    switch (type) {
-      case 'increase':
-        return 'text-green-600';
-      case 'decrease':
-        return 'text-red-600';
-      case 'neutral':
-        return 'text-muted-foreground';
-    }
-  };
-
-  const getChangeSymbol = (type: 'increase' | 'decrease' | 'neutral') => {
-    switch (type) {
-      case 'increase':
-        return '+';
-      case 'decrease':
-        return '-';
-      case 'neutral':
-        return '';
-    }
-  };
-
+// Metric component for displaying key metrics
+export function Metric({ label, value, change, trend }: Metric) {
   return (
-    <div className={cn("space-y-1", className)}>
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{label}</span>
-        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-      </div>
-      <div className="flex items-baseline space-x-2">
-        <span className="text-2xl font-bold">{value}</span>
+    <div className="space-y-1">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <div className="flex items-center space-x-2">
+        <p className="text-2xl font-bold">{value}</p>
         {change && (
-          <span className={cn(
-            "text-xs font-medium",
-            getChangeColor(change.type)
-          )}>
-            {getChangeSymbol(change.type)}{Math.abs(change.value)}%
+          <span className={`text-xs px-2 py-1 rounded-full ${
+            trend === 'up' ? 'bg-green-100 text-green-800' :
+            trend === 'down' ? 'bg-red-100 text-red-800' :
+            'bg-gray-100 text-gray-800'
+          }`}>
+            {change}
           </span>
         )}
       </div>

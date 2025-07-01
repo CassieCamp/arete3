@@ -2,8 +2,12 @@ from typing import Optional, List
 from bson import ObjectId
 from datetime import datetime
 from app.models.coaching_relationship import CoachingRelationship, RelationshipStatus
+from app.models.audit_log import AuditOperation, AuditSeverity
+from app.repositories.audit_repository import AuditRepository
 from app.db.mongodb import get_database
 import logging
+import os
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +15,7 @@ logger = logging.getLogger(__name__)
 class CoachingRelationshipRepository:
     def __init__(self):
         self.collection_name = "coaching_relationships"
+        self.audit_repository = AuditRepository()
 
     async def create_relationship(self, relationship: CoachingRelationship) -> CoachingRelationship:
         """Create a new coaching relationship (connection request)"""
@@ -250,10 +255,21 @@ class CoachingRelationshipRepository:
             logger.error(f"Traceback: {traceback.format_exc()}")
             raise
 
-    async def delete_relationship(self, relationship_id: str) -> bool:
-        """Delete a coaching relationship"""
+    async def delete_relationship(self, relationship_id: str, deleted_by: Optional[str] = None, deletion_reason: Optional[str] = None) -> bool:
+        """
+        Delete a coaching relationship with comprehensive audit logging
+        
+        ⚠️  DEPRECATION WARNING: Hard delete is deprecated. Use soft delete instead.
+        This method will be removed in a future version.
+        """
+        logger.warning(f"🚨 HARD DELETE ATTEMPTED - This is deprecated and dangerous!")
         logger.info(f"=== CoachingRelationshipRepository.delete_relationship called ===")
         logger.info(f"Deleting relationship_id: {relationship_id}")
+        logger.info(f"Deleted by: {deleted_by}")
+        logger.info(f"Deletion reason: {deletion_reason}")
+        
+        # Get current environment
+        environment = os.getenv("ENVIRONMENT", "development")
         
         try:
             db = get_database()
@@ -261,21 +277,182 @@ class CoachingRelationshipRepository:
                 logger.error("Database is None")
                 raise Exception("Database connection is None")
             
+            # First, get the relationship data for audit logging
+            relationship_doc = await db[self.collection_name].find_one({"_id": ObjectId(relationship_id)})
+            
+            if not relationship_doc:
+                logger.warning(f"⚠️ Relationship {relationship_id} not found for deletion")
+                return False
+            
+            # Log critical audit event BEFORE deletion
+            await self.audit_repository.log_critical_operation(
+                operation=AuditOperation.DELETE_RELATIONSHIP,
+                entity_type="coaching_relationship",
+                entity_id=relationship_id,
+                message=f"🚨 HARD DELETE ATTEMPTED: Relationship between coach {relationship_doc.get('coach_user_id')} and client {relationship_doc.get('client_user_id')}",
+                user_id=deleted_by,
+                operation_details={
+                    "coach_user_id": relationship_doc.get("coach_user_id"),
+                    "client_user_id": relationship_doc.get("client_user_id"),
+                    "status": relationship_doc.get("status"),
+                    "created_at": relationship_doc.get("created_at"),
+                    "deletion_reason": deletion_reason,
+                    "environment": environment,
+                    "method": "hard_delete",
+                    "deprecation_warning": "This method is deprecated and will be removed"
+                },
+                include_stack_trace=True
+            )
+            
+            # Environment-specific warnings
+            if environment == "production":
+                logger.critical(f"🚨 PRODUCTION HARD DELETE DETECTED! Relationship: {relationship_id}")
+                await self.audit_repository.log_critical_operation(
+                    operation=AuditOperation.PRODUCTION_DELETE_DETECTED,
+                    entity_type="coaching_relationship",
+                    entity_id=relationship_id,
+                    message="🚨 CRITICAL: Hard delete attempted in PRODUCTION environment",
+                    user_id=deleted_by,
+                    operation_details={
+                        "environment": environment,
+                        "stack_trace": traceback.format_stack()
+                    },
+                    include_stack_trace=True
+                )
+            
+            # Perform the actual deletion
             result = await db[self.collection_name].delete_one({"_id": ObjectId(relationship_id)})
             
             success = result.deleted_count > 0
             logger.info(f"Delete result: deleted_count={result.deleted_count}, success={success}")
             
             if success:
-                logger.info(f"✅ Successfully deleted coaching relationship")
+                # Log successful deletion
+                await self.audit_repository.log_critical_operation(
+                    operation=AuditOperation.DELETE_RELATIONSHIP,
+                    entity_type="coaching_relationship",
+                    entity_id=relationship_id,
+                    message=f"✅ Hard delete completed successfully",
+                    user_id=deleted_by,
+                    operation_details={
+                        "deleted_count": result.deleted_count,
+                        "environment": environment
+                    }
+                )
+                logger.warning(f"⚠️ Successfully HARD DELETED coaching relationship {relationship_id}")
             else:
                 logger.info("No relationship was deleted")
             
             return success
             
         except Exception as e:
+            # Log the error with full context
+            await self.audit_repository.log_critical_operation(
+                operation=AuditOperation.DELETE_RELATIONSHIP,
+                entity_type="coaching_relationship",
+                entity_id=relationship_id,
+                message=f"❌ Hard delete failed with error: {str(e)}",
+                user_id=deleted_by,
+                operation_details={
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "environment": environment
+                },
+                include_stack_trace=True
+            )
+            
             logger.error(f"❌ Error in delete_relationship: {e}")
             logger.error(f"Exception type: {type(e)}")
-            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise
+
+    async def soft_delete_relationship(self, relationship_id: str, deleted_by: str, deletion_reason: str = "User requested deletion") -> bool:
+        """
+        Soft delete a coaching relationship (recommended method)
+        Marks the relationship as deleted without removing it from the database
+        """
+        logger.info(f"=== CoachingRelationshipRepository.soft_delete_relationship called ===")
+        logger.info(f"Soft deleting relationship_id: {relationship_id}")
+        logger.info(f"Deleted by: {deleted_by}")
+        logger.info(f"Deletion reason: {deletion_reason}")
+        
+        try:
+            db = get_database()
+            if db is None:
+                logger.error("Database is None")
+                raise Exception("Database connection is None")
+            
+            # First, get the relationship data for audit logging
+            relationship_doc = await db[self.collection_name].find_one({"_id": ObjectId(relationship_id)})
+            
+            if not relationship_doc:
+                logger.warning(f"⚠️ Relationship {relationship_id} not found for soft deletion")
+                return False
+            
+            # Check if already soft deleted
+            if relationship_doc.get("deleted_at"):
+                logger.warning(f"⚠️ Relationship {relationship_id} is already soft deleted")
+                return False
+            
+            # Prepare soft delete update
+            now = datetime.utcnow()
+            update_data = {
+                "status": RelationshipStatus.DELETED.value,
+                "deleted_at": now,
+                "deleted_by": deleted_by,
+                "deletion_reason": deletion_reason,
+                "updated_at": now
+            }
+            
+            # Log the soft delete operation
+            await self.audit_repository.log_operation(
+                operation=AuditOperation.SOFT_DELETE_RELATIONSHIP,
+                entity_type="coaching_relationship",
+                entity_id=relationship_id,
+                message=f"Soft delete: Relationship between coach {relationship_doc.get('coach_user_id')} and client {relationship_doc.get('client_user_id')}",
+                user_id=deleted_by,
+                operation_details={
+                    "coach_user_id": relationship_doc.get("coach_user_id"),
+                    "client_user_id": relationship_doc.get("client_user_id"),
+                    "previous_status": relationship_doc.get("status"),
+                    "deletion_reason": deletion_reason,
+                    "method": "soft_delete"
+                }
+            )
+            
+            # Perform the soft delete
+            result = await db[self.collection_name].update_one(
+                {"_id": ObjectId(relationship_id)},
+                {"$set": update_data}
+            )
+            
+            success = result.modified_count > 0
+            logger.info(f"Soft delete result: modified_count={result.modified_count}, success={success}")
+            
+            if success:
+                logger.info(f"✅ Successfully soft deleted coaching relationship {relationship_id}")
+            else:
+                logger.warning("No relationship was soft deleted")
+            
+            return success
+            
+        except Exception as e:
+            # Log the error
+            await self.audit_repository.log_critical_operation(
+                operation=AuditOperation.SOFT_DELETE_RELATIONSHIP,
+                entity_type="coaching_relationship",
+                entity_id=relationship_id,
+                message=f"❌ Soft delete failed with error: {str(e)}",
+                user_id=deleted_by,
+                operation_details={
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "deletion_reason": deletion_reason
+                },
+                include_stack_trace=True
+            )
+            
+            logger.error(f"❌ Error in soft_delete_relationship: {e}")
+            logger.error(f"Exception type: {type(e)}")
             logger.error(f"Traceback: {traceback.format_exc()}")
             raise

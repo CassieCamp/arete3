@@ -187,7 +187,7 @@ export default function DocumentLibraryPage() {
               </div>
               <Button
                 onClick={() => router.push('/dashboard/documents/upload')}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-midnight-indigo hover:bg-owlet-teal"
               >
                 Upload New Document
               </Button>
@@ -222,7 +222,7 @@ export default function DocumentLibraryPage() {
                   </p>
                   <Button
                     onClick={() => router.push('/dashboard/documents/upload')}
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-midnight-indigo hover:bg-owlet-teal"
                   >
                     Upload Your First Document
                   </Button>
@@ -304,7 +304,7 @@ export default function DocumentLibraryPage() {
                   <Button
                     onClick={() => setShowGenerator(true)}
                     variant="outline"
-                    className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                    className="text-midnight-indigo border-midnight-indigo hover:bg-moonlight-ivory"
                   >
                     Generate New Baseline
                   </Button>

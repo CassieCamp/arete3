@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict, Any
 from app.api.v1.deps import get_current_user
 from app.services.dashboard_analytics_service import DashboardAnalyticsService
+from app.schemas.dashboard import DashboardAnalyticsAPIResponse
 import logging
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ async def get_dashboard_analytics(
         
         analytics_service = DashboardAnalyticsService()
         
-        analytics = await analytics_service.get_user_dashboard_analytics(
+        analytics = await analytics_service.get_analytics(
             user_id=current_user["clerk_user_id"],
             user_role=current_user["role"],
             days_back=days_back

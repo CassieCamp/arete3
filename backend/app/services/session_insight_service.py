@@ -99,6 +99,10 @@ class SessionInsightService:
             )
             
             logger.info(f"✅ Successfully generated session insight: {updated_insight.id}")
+            
+            # Send notification to both coach and client
+            await self._send_insight_notifications(updated_insight)
+            
             return updated_insight
             
         except Exception as e:
@@ -414,3 +418,30 @@ Return only valid JSON matching the exact structure above.
         )
         
         return base_insight
+    
+    async def _send_insight_notifications(self, insight: SessionInsight):
+        """Send notifications when session insight is completed"""
+        try:
+            from app.services.notification_service import NotificationService
+            notification_service = NotificationService()
+            
+            # Notify the client
+            await notification_service.notify_session_insight_completed(
+                user_id=insight.client_user_id,
+                insight_id=str(insight.id),
+                session_title=insight.session_title
+            )
+            
+            # Notify the coach if they didn't create the insight
+            if insight.created_by != insight.coach_user_id:
+                await notification_service.notify_session_insight_completed(
+                    user_id=insight.coach_user_id,
+                    insight_id=str(insight.id),
+                    session_title=insight.session_title
+                )
+                
+            logger.info(f"✅ Sent notifications for session insight: {insight.id}")
+            
+        except Exception as e:
+            logger.error(f"❌ Error sending insight notifications: {e}")
+            # Don't raise the error as the insight was created successfully

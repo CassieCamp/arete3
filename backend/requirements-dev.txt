@@ -1,0 +1,11 @@
+# Development dependencies - install with: pip install -r requirements-dev.txt
+-r requirements.txt
+
+# Additional dev dependencies that might be needed
+python-multipart==0.0.20
+pydantic[email]==2.11.7
+svix==1.68.0
+
+# Development tools
+uvicorn[standard]==0.35.0
+watchfiles==1.1.0

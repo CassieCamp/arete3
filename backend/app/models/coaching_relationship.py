@@ -29,6 +29,7 @@ class RelationshipStatus(str, Enum):
     PENDING_BY_COACH = "pending_by_coach"
     ACTIVE = "active"
     DECLINED = "declined"
+    DELETED = "deleted"  # For soft delete
 
 
 class CoachingRelationship(BaseModel):
@@ -42,5 +43,12 @@ class CoachingRelationship(BaseModel):
     coach_user_id: str  # ID of the coach user
     client_user_id: str  # ID of the client user
     status: RelationshipStatus = RelationshipStatus.PENDING_BY_COACH
+    
+    # Soft delete fields
+    deleted_at: Optional[datetime] = None
+    deleted_by: Optional[str] = None  # User ID who deleted the relationship
+    deletion_reason: Optional[str] = None
+    
+    # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

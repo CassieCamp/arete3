@@ -29,6 +29,7 @@ async def get_current_user(
         "clerk_user_id": user.clerk_user_id,
         "email": user.email,
         "role": user.role,
+        "onboarding_state": user.onboarding_state,
         "created_at": user.created_at.isoformat()
     }
 
@@ -272,3 +273,129 @@ async def create_current_user_manually(
             "success": False,
             "message": f"Error creating user: {str(e)}"
         }
+
+
+@router.get("/me/onboarding")
+async def get_onboarding_state(
+    clerk_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """Get current user's onboarding state"""
+    from app.services.user_service import UserService
+    
+    user_service = UserService()
+    onboarding_state = await user_service.get_onboarding_state(clerk_user_id)
+    
+    if onboarding_state is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return {"onboarding_state": onboarding_state}
+
+
+@router.post("/me/onboarding/start")
+async def start_onboarding(
+    clerk_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """Start onboarding process for current user"""
+    from app.services.user_service import UserService
+    
+    user_service = UserService()
+    updated_user = await user_service.start_onboarding(clerk_user_id)
+    
+    if not updated_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return {
+        "success": True,
+        "message": "Onboarding started",
+        "onboarding_state": updated_user.onboarding_state
+    }
+
+
+@router.post("/me/onboarding/step/{step}")
+async def complete_onboarding_step(
+    step: int,
+    clerk_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """Complete a specific onboarding step"""
+    from app.services.user_service import UserService
+    
+    if step < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Step must be a non-negative integer"
+        )
+    
+    user_service = UserService()
+    updated_user = await user_service.complete_onboarding_step(clerk_user_id, step)
+    
+    if not updated_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return {
+        "success": True,
+        "message": f"Step {step} completed",
+        "onboarding_state": updated_user.onboarding_state
+    }
+
+
+@router.post("/me/onboarding/complete")
+async def complete_onboarding(
+    clerk_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """Mark onboarding as completed"""
+    from app.services.user_service import UserService
+    
+    user_service = UserService()
+    updated_user = await user_service.complete_onboarding(clerk_user_id)
+    
+    if not updated_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return {
+        "success": True,
+        "message": "Onboarding completed",
+        "onboarding_state": updated_user.onboarding_state
+    }
+
+
+@router.put("/me/onboarding")
+async def update_onboarding_state(
+    request: Dict[str, Any],
+    clerk_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """Update user's onboarding state"""
+    from app.services.user_service import UserService
+    
+    onboarding_state = request.get("onboarding_state")
+    if not onboarding_state:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="onboarding_state is required"
+        )
+    
+    user_service = UserService()
+    updated_user = await user_service.update_onboarding_state(clerk_user_id, onboarding_state)
+    
+    if not updated_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return {
+        "success": True,
+        "message": "Onboarding state updated",
+        "onboarding_state": updated_user.onboarding_state
+    }

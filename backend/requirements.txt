@@ -13,3 +13,10 @@ python-docx
 httpx
 # AI Services
 anthropic  # Fallback AI provider
+
+# Dependencies that were missing and caused startup failures
+python-multipart
+pydantic[email]
+svix
+lxml
+cryptography

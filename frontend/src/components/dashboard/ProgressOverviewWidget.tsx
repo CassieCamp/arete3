@@ -158,20 +158,14 @@ function CompactProgressView({
         <Metric
           label="Goals Completed"
           value={`${data.goals.completed}/${data.goals.total}`}
-          change={{
-            value: data.goals.completionRate,
-            type: data.goals.completionRate > 50 ? 'increase' : 'decrease'
-          }}
-          icon={Target}
+          change={`${data.goals.completionRate}%`}
+          trend={data.goals.completionRate > 50 ? 'up' : 'down'}
         />
         <Metric
           label={userRole === 'coach' ? 'Client Insights' : 'My Insights'}
           value={data.insights.thisMonth}
-          change={{
-            value: data.insights.trendValue,
-            type: data.insights.trend === 'up' ? 'increase' : 'decrease'
-          }}
-          icon={Brain}
+          change={`+${data.insights.trendValue}%`}
+          trend={data.insights.trend === 'up' ? 'up' : data.insights.trend === 'down' ? 'down' : 'neutral'}
         />
       </div>
     </div>

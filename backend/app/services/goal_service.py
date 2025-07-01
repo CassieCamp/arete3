@@ -54,6 +54,10 @@ class GoalService:
             
             created_goal = await self.goal_repository.create_goal(goal)
             logger.info(f"✅ Successfully created goal with ID: {created_goal.id}")
+            
+            # Send notification about new goal
+            await self._send_goal_notification(created_goal, "created")
+            
             return created_goal
             
         except Exception as e:
@@ -154,6 +158,12 @@ class GoalService:
             
             if updated_goal:
                 logger.info(f"✅ Successfully updated goal {goal_id}")
+                
+                # Send notification if status changed to completed
+                if validated_update_data.get("status") == "completed":
+                    await self._send_goal_notification(updated_goal, "completed")
+                elif "progress_emoji" in validated_update_data or "progress_notes" in validated_update_data:
+                    await self._send_goal_notification(updated_goal, "progress_updated")
             else:
                 logger.warning(f"Goal {goal_id} was not updated")
             
@@ -196,6 +206,9 @@ class GoalService:
             
             if updated_goal:
                 logger.info(f"✅ Successfully updated progress for goal {goal_id}")
+                
+                # Send notification about progress update
+                await self._send_goal_notification(updated_goal, "progress_updated")
             else:
                 logger.warning(f"Progress update failed for goal {goal_id}")
             
@@ -344,3 +357,22 @@ class GoalService:
         except Exception as e:
             logger.error(f"❌ Error getting goals by priority: {e}")
             raise
+    
+    async def _send_goal_notification(self, goal: Goal, update_type: str):
+        """Send notification about goal updates"""
+        try:
+            from app.services.notification_service import NotificationService
+            notification_service = NotificationService()
+            
+            await notification_service.notify_goal_update(
+                user_id=goal.user_id,
+                goal_id=str(goal.id),
+                goal_title=goal.goal_statement,
+                update_type=update_type
+            )
+            
+            logger.info(f"✅ Sent {update_type} notification for goal: {goal.id}")
+            
+        except Exception as e:
+            logger.error(f"❌ Error sending goal notification: {e}")
+            # Don't raise the error as the goal operation was successful

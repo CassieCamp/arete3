@@ -11,6 +11,8 @@ from app.services.goal_service import GoalService
 from app.services.session_insight_service import SessionInsightService
 from app.services.coaching_relationship_service import CoachingRelationshipService
 from app.repositories.document_repository import DocumentRepository
+from app.repositories.coaching_relationship_repository import CoachingRelationshipRepository
+from app.repositories.user_repository import UserRepository
 import logging
 
 logger = logging.getLogger(__name__)
@@ -20,8 +22,86 @@ class DashboardAnalyticsService:
     def __init__(self):
         self.goal_service = GoalService()
         self.session_insight_service = SessionInsightService()
-        self.coaching_relationship_service = CoachingRelationshipService()
         self.document_repository = DocumentRepository()
+        
+        # Initialize repositories needed for CoachingRelationshipService
+        self.coaching_relationship_repository = CoachingRelationshipRepository()
+        self.user_repository = UserRepository()
+        
+        # Initialize CoachingRelationshipService with required dependencies
+        self.coaching_relationship_service = CoachingRelationshipService(
+            self.coaching_relationship_repository,
+            self.user_repository
+        )
+    async def get_analytics(
+        self,
+        user_id: str,
+        user_role: str,
+        days_back: int = 30
+    ) -> Dict[str, Any]:
+        """
+        Get analytics data specifically for the dashboard /analytics endpoint.
+        This method aggregates data for the current user including:
+        - Total number of goals and completed goals
+        - Count of recent session insights  
+        - Summary of upcoming sessions or deadlines
+        """
+        try:
+            logger.info(f"=== DashboardAnalyticsService.get_analytics called ===")
+            logger.info(f"user_id: {user_id}, role: {user_role}, days_back: {days_back}")
+            
+            since_date = datetime.utcnow() - timedelta(days=days_back)
+            
+            # Get comprehensive analytics first
+            full_analytics = await self.get_user_dashboard_analytics(user_id, user_role, days_back)
+            
+            # Extract and structure the specific data needed for the analytics endpoint
+            overview = full_analytics.get("overview", {})
+            
+            if user_role == 'coach':
+                analytics_data = {
+                    "goals": {
+                        "total": overview.get("total_client_goals", 0),
+                        "completed": overview.get("completed_client_goals", 0),
+                        "active": overview.get("active_client_goals", 0)
+                    },
+                    "session_insights": {
+                        "total": overview.get("total_session_insights", 0),
+                        "recent": overview.get("recent_session_insights", 0)
+                    },
+                    "clients": {
+                        "active": overview.get("active_clients", 0)
+                    },
+                    "upcoming_sessions": await self._get_upcoming_sessions(user_id, user_role),
+                    "recent_activity": full_analytics.get("recent_activity", [])
+                }
+            else:  # client
+                analytics_data = {
+                    "goals": {
+                        "total": overview.get("active_goals", 0) + overview.get("completed_goals", 0),
+                        "completed": overview.get("completed_goals", 0),
+                        "active": overview.get("active_goals", 0)
+                    },
+                    "session_insights": {
+                        "total": overview.get("total_session_insights", 0),
+                        "recent": overview.get("recent_session_insights", 0)
+                    },
+                    "coaching_relationships": {
+                        "active": overview.get("active_coaching_relationships", 0)
+                    },
+                    "upcoming_sessions": await self._get_upcoming_sessions(user_id, user_role),
+                    "recent_activity": full_analytics.get("recent_activity", [])
+                }
+            
+            logger.info(f"✅ Analytics data prepared successfully")
+            return analytics_data
+            
+        except Exception as e:
+            logger.error(f"❌ Error getting analytics: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return {}
+
 
     async def get_user_dashboard_analytics(
         self,
@@ -50,7 +130,7 @@ class DashboardAnalyticsService:
         try:
             # Get coaching relationships
             relationships_data = await self.coaching_relationship_service.get_user_relationships(coach_user_id)
-            active_relationships = relationships_data.get("active_relationships", [])
+            active_relationships = relationships_data.get("active", [])
             client_ids = [rel.client_user_id for rel in active_relationships]
             
             # Session insights analytics
@@ -118,7 +198,7 @@ class DashboardAnalyticsService:
         try:
             # Get coaching relationships
             relationships_data = await self.coaching_relationship_service.get_user_relationships(client_user_id)
-            active_relationships = relationships_data.get("active_relationships", [])
+            active_relationships = relationships_data.get("active", [])
             
             # Session insights
             insights = await self.session_insight_service.insight_repository.get_insights_by_user(client_user_id)
@@ -170,7 +250,7 @@ class DashboardAnalyticsService:
                 else:
                     # For coaches, get insights from all their clients
                     relationships_data = await self.coaching_relationship_service.get_user_relationships(user_id)
-                    active_relationships = relationships_data.get("active_relationships", [])
+                    active_relationships = relationships_data.get("active", [])
                     insights = []
                     for rel in active_relationships:
                         try:
@@ -332,3 +412,53 @@ class DashboardAnalyticsService:
             "total_insights": len(insights),
             "total_goals": len(goals)
         }
+    async def _get_upcoming_sessions(self, user_id: str, user_role: str) -> List[Dict[str, Any]]:
+        """Get upcoming sessions or deadlines for the user"""
+        try:
+            # For now, return mock data since we don't have a sessions/calendar system yet
+            # This can be expanded when session scheduling is implemented
+            upcoming = []
+            
+            if user_role == 'coach':
+                # Mock upcoming sessions for coaches
+                upcoming = [
+                    {
+                        "type": "coaching_session",
+                        "title": "Coaching Session",
+                        "description": "Scheduled session with client",
+                        "date": (datetime.utcnow() + timedelta(days=1)).isoformat(),
+                        "time": "2:00 PM"
+                    },
+                    {
+                        "type": "goal_review",
+                        "title": "Goal Review",
+                        "description": "Monthly client goal review",
+                        "date": (datetime.utcnow() + timedelta(days=5)).isoformat(),
+                        "time": "10:00 AM"
+                    }
+                ]
+            else:  # client
+                # Mock upcoming sessions for clients
+                upcoming = [
+                    {
+                        "type": "coaching_session",
+                        "title": "Coaching Session",
+                        "description": "Session with your coach",
+                        "date": (datetime.utcnow() + timedelta(days=1)).isoformat(),
+                        "time": "2:00 PM"
+                    },
+                    {
+                        "type": "goal_deadline",
+                        "title": "Goal Check-in",
+                        "description": "Review progress on current goals",
+                        "date": (datetime.utcnow() + timedelta(days=7)).isoformat(),
+                        "time": "Self-paced"
+                    }
+                ]
+            
+            logger.info(f"Generated {len(upcoming)} upcoming sessions for {user_role}")
+            return upcoming
+            
+        except Exception as e:
+            logger.error(f"Error getting upcoming sessions: {e}")
+            return []

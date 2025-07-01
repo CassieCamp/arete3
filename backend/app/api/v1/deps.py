@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, WebSocket, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from clerk_backend_api import Clerk
 from app.core.config import settings
@@ -175,3 +175,44 @@ def get_analysis_service() -> AnalysisService:
     baseline_repository = BaselineRepository()
     document_repository = DocumentRepository()
     return AnalysisService(baseline_repository, document_repository)
+
+
+async def get_current_user_websocket(websocket: WebSocket, token: str = Query(...)):
+    """Get current user from WebSocket connection with token as query parameter"""
+    logger.info(f"=== get_current_user_websocket called ===")
+    logger.info(f"Token received: {token[:20]}..." if token else "No token")
+    
+    try:
+        user_service = UserService()
+        
+        # Verify the JWT token
+        payload = jwt.decode(token, options={"verify_signature": False})
+        clerk_user_id = payload.get("sub")
+        
+        if not clerk_user_id:
+            logger.error("No clerk_user_id found in token")
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        logger.info(f"🔍 Authenticated WebSocket user with Clerk ID: {clerk_user_id}")
+        
+        # Get user from database
+        user = await user_service.get_user_by_clerk_id(clerk_user_id)
+        if not user:
+            logger.error(f"User not found for clerk_id: {clerk_user_id}")
+            raise HTTPException(status_code=401, detail="User not found")
+        
+        logger.info(f"✅ WebSocket User {clerk_user_id} found in backend database: {user.id}")
+        
+        return {
+            "user_id": str(user.id),  # Fixed: Use backend user ID consistently
+            "clerk_user_id": clerk_user_id,
+            "email": user.email,
+            "role": user.role
+        }
+        
+    except jwt.InvalidTokenError as e:
+        logger.error(f"❌ Invalid JWT token: {e}")
+        raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception as e:
+        logger.error(f"❌ Error in get_current_user_websocket: {e}")
+        raise HTTPException(status_code=401, detail="Could not validate credentials")

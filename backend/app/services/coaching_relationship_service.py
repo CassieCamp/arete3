@@ -73,6 +73,12 @@ class CoachingRelationshipService:
             created_relationship = await self.coaching_relationship_repository.create_relationship(new_relationship)
             
             logger.info(f"✅ Successfully created connection request with ID: {created_relationship.id}")
+            
+            # Send notification to client about the new request
+            await self._send_relationship_notification(
+                created_relationship, "request_received", client_user.clerk_user_id, coach_user.email
+            )
+            
             return created_relationship
             
         except Exception as e:
@@ -134,6 +140,17 @@ class CoachingRelationshipService:
                 raise ValueError("Failed to update relationship status")
             
             logger.info(f"✅ Successfully updated relationship status to {new_status}")
+            
+            # Send notification to coach about the response
+            if new_status == RelationshipStatus.ACTIVE:
+                await self._send_relationship_notification(
+                    updated_relationship, "request_accepted", updated_relationship.coach_user_id, "Client"
+                )
+            elif new_status == RelationshipStatus.DECLINED:
+                await self._send_relationship_notification(
+                    updated_relationship, "request_declined", updated_relationship.coach_user_id, "Client"
+                )
+            
             return updated_relationship
             
         except Exception as e:
@@ -170,3 +187,22 @@ class CoachingRelationshipService:
         except Exception as e:
             logger.error(f"❌ Error in get_user_relationships: {e}")
             raise
+    
+    async def _send_relationship_notification(self, relationship: CoachingRelationship, update_type: str, recipient_user_id: str, other_user_name: str):
+        """Send notification about coaching relationship updates"""
+        try:
+            from app.services.notification_service import NotificationService
+            notification_service = NotificationService()
+            
+            await notification_service.notify_coaching_relationship_update(
+                user_id=recipient_user_id,
+                relationship_id=str(relationship.id),
+                update_type=update_type,
+                other_user_name=other_user_name
+            )
+            
+            logger.info(f"✅ Sent {update_type} notification for relationship: {relationship.id}")
+            
+        except Exception as e:
+            logger.error(f"❌ Error sending relationship notification: {e}")
+            # Don't raise the error as the relationship operation was successful
