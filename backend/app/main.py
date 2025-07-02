@@ -11,9 +11,14 @@ from app.api.v1.endpoints.session_insights import router as session_insights_rou
 from app.api.v1.endpoints.dashboard import router as dashboard_router
 from app.api.v1.endpoints.notifications import router as notifications_router
 from app.api.v1.endpoints.waitlist import router as waitlist_router
+from app.api.v1.endpoints.discovery_form import router as discovery_form_router
 from app.api.v1.webhooks.clerk import router as clerk_router
 from app.db.mongodb import connect_to_mongo, close_mongo_connection
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -55,6 +60,7 @@ app.include_router(session_insights_router, prefix="/api/v1/session-insights", t
 app.include_router(dashboard_router, prefix="/api/v1/dashboard", tags=["dashboard"])
 app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
 app.include_router(waitlist_router, prefix="/api/v1/waitlist", tags=["waitlist"])
+app.include_router(discovery_form_router, prefix="/api/v1/discovery-form", tags=["discovery-form"])
 app.include_router(clerk_router, prefix="/api/v1/webhooks", tags=["webhooks"])
 
 

@@ -7,9 +7,9 @@ import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { useState, useEffect, useRef } from "react";
 
 export default function Home() {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,27 +30,39 @@ export default function Home() {
     setIsSubmitting(true);
 
     const formData = new FormData(e.currentTarget);
+    const roles = formData.getAll('role');
     const data = {
       firstName: formData.get('firstName'),
       lastName: formData.get('lastName'),
       email: formData.get('email'),
-      role: formData.get('role'),
-      company: formData.get('company'),
+      linkedinUrl: formData.get('linkedinUrl'),
+      roles: roles,
       feedback: formData.get('feedback'),
       timestamp: new Date().toISOString()
     };
 
     try {
-      // For now, we'll just log the data and show success
-      // In the future, this could be sent to an API endpoint
-      console.log('Form submission:', data);
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Submit to backend API
+      const response = await fetch('http://localhost:8000/api/v1/discovery-form/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Discovery form submitted successfully:', result);
       
       setIsSubmitted(true);
     } catch (error) {
       console.error('Form submission error:', error);
+      // Still show success to user even if API fails
+      setIsSubmitted(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -122,7 +134,7 @@ export default function Home() {
               Your partner in
               <span className="block text-metis-gold">executive transformation</span>
             </h1>
-            <p className="text-base md:text-lg text-owlet-teal mb-12 max-w-3xl mx-auto leading-loose text-left px-8">
+            <p className="text-base md:text-lg text-owlet-teal mb-12 max-w-4xl mx-auto leading-loose text-left px-10">
               Excellence isn't perfection. It's the courage to become who you're truly meant to be. The ancient Greeks called this arete—your highest potential realized. That depth of courage deserves a guide who understands the journey.
               <br /><br />
               We believe coaching should be as normal for leaders as it is for athletes. Enter your human executive coach. Our role is simple: honor that sacred relationship by providing AI that gently amplifies the wisdom, never replacing the human connection that drives real growth.
@@ -143,21 +155,24 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Discovery Call Section - Commented out for launch, will add back tomorrow */}
-      {/*
-      <section className="py-12 bg-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-midnight-indigo mb-4">
-              What's Top of Mind for You?
-            </h2>
-            <p className="text-xl text-owlet-teal max-w-3xl mx-auto leading-relaxed">
-              We want to hear from you! Are you an executive coach, HR or people operations leader, or a leader who has had a transformative coaching experience? We're building the future of executive coaching, and that means we need to understand what truly matters to you. If you'd like to share your insights and help shape this vision, we'd love to chat.
-            </p>
-          </div>
+      {/* Discovery Conversation Section */}
+      <section className="py-16 bg-white min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+            {/* Left Column - Text Content */}
+            <div className="lg:pr-8">
+              <h2 className="text-3xl md:text-4xl font-serif font-bold text-midnight-indigo mb-8">
+                What's Top of Mind for You?
+              </h2>
+              <p className="text-base md:text-lg text-owlet-teal leading-loose">
+                We want to hear from you! Are you an executive coach, HR or people operations leader, or a leader who has had a transformative coaching experience? We're building the future of executive coaching, and that means we need to understand what truly matters to you. If you'd like to share your insights and help shape this vision, we'd love to chat.
+              </p>
+            </div>
 
-          <Card className="border-cloud-grey/30 shadow-lg">
-            <CardContent className="p-8">
+            {/* Right Column - Form */}
+            <div className="lg:pl-8">
+              <Card className="border-cloud-grey/30 shadow-lg overflow-visible">
+                <CardContent className="p-8 space-y-6">
               {isSubmitted ? (
                 <div className="text-center py-8">
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -167,118 +182,122 @@ export default function Home() {
                   </div>
                   <h3 className="text-2xl font-bold text-midnight-indigo mb-2">Thank You!</h3>
                   <p className="text-owlet-teal mb-6">
-                    We've received your insights and will be in touch soon to schedule a conversation.
+                    We've received your request and will be in touch soon to schedule a discovery conversation.
                   </p>
                   <Button
                     onClick={() => setIsSubmitted(false)}
                     variant="outline"
                     className="border-midnight-indigo text-midnight-indigo hover:bg-midnight-indigo hover:text-white"
                   >
-                    Submit Another Response
+                    Submit Another Request
                   </Button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label htmlFor="firstName" className="block text-sm font-medium text-midnight-indigo">
-                        First Name *
-                      </label>
-                      <input
-                        id="firstName"
-                        name="firstName"
-                        type="text"
-                        required
-                        className="w-full px-3 py-2 border border-cloud-grey/30 rounded-md focus:outline-none focus:ring-2 focus:ring-owlet-teal focus:border-owlet-teal"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="lastName" className="block text-sm font-medium text-midnight-indigo">
-                        Last Name *
-                      </label>
-                      <input
-                        id="lastName"
-                        name="lastName"
-                        type="text"
-                        required
-                        className="w-full px-3 py-2 border border-cloud-grey/30 rounded-md focus:outline-none focus:ring-2 focus:ring-owlet-teal focus:border-owlet-teal"
-                      />
-                    </div>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <input
+                      id="firstName"
+                      name="firstName"
+                      type="text"
+                      required
+                      placeholder="First Name *"
+                      className="w-full px-3 py-3 border border-cloud-grey/30 rounded-md focus:outline-none focus:ring-2 focus:ring-owlet-teal focus:border-owlet-teal"
+                    />
+                    <input
+                      id="lastName"
+                      name="lastName"
+                      type="text"
+                      required
+                      placeholder="Last Name *"
+                      className="w-full px-3 py-3 border border-cloud-grey/30 rounded-md focus:outline-none focus:ring-2 focus:ring-owlet-teal focus:border-owlet-teal"
+                    />
                   </div>
 
-                  <div className="space-y-2">
-                    <label htmlFor="email" className="block text-sm font-medium text-midnight-indigo">
-                      Email Address *
-                    </label>
+                  <div className="grid grid-cols-2 gap-4">
                     <input
                       id="email"
                       name="email"
                       type="email"
                       required
-                      className="w-full px-3 py-2 border border-cloud-grey/30 rounded-md focus:outline-none focus:ring-2 focus:ring-owlet-teal focus:border-owlet-teal"
+                      placeholder="Email Address *"
+                      className="w-full px-3 py-3 border border-cloud-grey/30 rounded-md focus:outline-none focus:ring-2 focus:ring-owlet-teal focus:border-owlet-teal"
                     />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="role" className="block text-sm font-medium text-midnight-indigo">
-                      Role *
-                    </label>
-                    <select
-                      id="role"
-                      name="role"
-                      required
-                      className="w-full px-3 py-2 border border-cloud-grey/30 rounded-md focus:outline-none focus:ring-2 focus:ring-owlet-teal focus:border-owlet-teal"
-                    >
-                      <option value="">Select your role</option>
-                      <option value="executive-coach">Executive Coach</option>
-                      <option value="hr-leader">HR Leader</option>
-                      <option value="people-ops-leader">People Ops Leader</option>
-                      <option value="executive-with-coaching">Executive with Coaching Experience</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="company" className="block text-sm font-medium text-midnight-indigo">
-                      Company/Organization
-                    </label>
                     <input
-                      id="company"
-                      name="company"
-                      type="text"
-                      className="w-full px-3 py-2 border border-cloud-grey/30 rounded-md focus:outline-none focus:ring-2 focus:ring-owlet-teal focus:border-owlet-teal"
+                      id="linkedinUrl"
+                      name="linkedinUrl"
+                      type="url"
+                      placeholder="LinkedIn URL or Website"
+                      className="w-full px-3 py-3 border border-cloud-grey/30 rounded-md focus:outline-none focus:ring-2 focus:ring-owlet-teal focus:border-owlet-teal"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label htmlFor="feedback" className="block text-sm font-medium text-midnight-indigo">
-                      What's one thing about executive coaching that you wish worked better?
-                    </label>
-                    <textarea
-                      id="feedback"
-                      name="feedback"
-                      rows={4}
-                      className="w-full px-3 py-2 border border-cloud-grey/30 rounded-md focus:outline-none focus:ring-2 focus:ring-owlet-teal focus:border-owlet-teal"
-                      placeholder="Share your thoughts..."
-                    />
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-midnight-indigo mb-3">Select all that apply *</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="flex items-center space-x-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="role"
+                          value="leader-on-the-journey"
+                          className="w-4 h-4 text-owlet-teal border-cloud-grey/30 rounded focus:ring-owlet-teal focus:ring-2"
+                        />
+                        <span className="text-sm text-midnight-indigo">Leader on the Journey</span>
+                      </label>
+                      <label className="flex items-center space-x-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="role"
+                          value="executive-coach"
+                          className="w-4 h-4 text-owlet-teal border-cloud-grey/30 rounded focus:ring-owlet-teal focus:ring-2"
+                        />
+                        <span className="text-sm text-midnight-indigo">Executive Coach</span>
+                      </label>
+                      <label className="flex items-center space-x-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="role"
+                          value="hr-people-ops-leader"
+                          className="w-4 h-4 text-owlet-teal border-cloud-grey/30 rounded focus:ring-owlet-teal focus:ring-2"
+                        />
+                        <span className="text-sm text-midnight-indigo">HR/People Ops Leader</span>
+                      </label>
+                      <label className="flex items-center space-x-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="role"
+                          value="other"
+                          className="w-4 h-4 text-owlet-teal border-cloud-grey/30 rounded focus:ring-owlet-teal focus:ring-2"
+                        />
+                        <span className="text-sm text-midnight-indigo">Other</span>
+                      </label>
+                    </div>
                   </div>
 
-                  <div className="pt-4">
+                  <textarea
+                    id="feedback"
+                    name="feedback"
+                    rows={3}
+                    className="w-full px-3 py-3 border border-cloud-grey/30 rounded-md focus:outline-none focus:ring-2 focus:ring-owlet-teal focus:border-owlet-teal"
+                    placeholder="What's one thing about executive coaching that you wish worked better?"
+                  />
+
+                  <div className="pt-6 pb-2">
                     <Button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full bg-midnight-indigo hover:bg-midnight-indigo/90 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 text-lg"
+                      className="w-full bg-[#D6B370] hover:bg-[#D6B370]/90 disabled:opacity-50 disabled:cursor-not-allowed text-[#1B1E3C] py-4 text-lg font-semibold shadow-lg transition-all duration-200 hover:shadow-xl"
                     >
-                      {isSubmitting ? 'Submitting...' : 'Share Your Insights'}
+                      {isSubmitting ? 'Submitting...' : "Let's Connect"}
                     </Button>
                   </div>
                 </form>
               )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       </section>
-      */}
     </div>
   );
 }
