@@ -33,7 +33,7 @@ export const BaselineDisplay: React.FC = () => {
       }
 
       // First, get the current user's ID
-      const userResponse = await fetch('http://localhost:8000/api/v1/users/me', {
+      const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/users/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -46,7 +46,7 @@ export const BaselineDisplay: React.FC = () => {
       const userData = await userResponse.json();
       const userId = userData.id;
 
-      const response = await fetch(`http://localhost:8000/api/v1/analysis/baseline/${userId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/analysis/baseline/${userId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

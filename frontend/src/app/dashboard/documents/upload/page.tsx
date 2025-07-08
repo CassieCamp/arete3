@@ -107,7 +107,7 @@ export default function DocumentUploadPage() {
       }
 
       // Make API request
-      const response = await fetch('http://localhost:8000/api/v1/documents/upload', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/documents/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

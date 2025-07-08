@@ -61,7 +61,7 @@ export default function DocumentLibraryPage() {
       }
 
       // Make API request to fetch documents
-      const response = await fetch('http://localhost:8000/api/v1/documents/', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/documents/`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

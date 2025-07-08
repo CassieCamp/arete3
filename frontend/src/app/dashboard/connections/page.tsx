@@ -55,7 +55,7 @@ export default function ConnectionsPage() {
         throw new Error("No authentication token available");
       }
 
-      const response = await fetch("http://localhost:8000/api/v1/coaching-relationships/", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/coaching-relationships/`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -93,7 +93,7 @@ export default function ConnectionsPage() {
         throw new Error("No authentication token available");
       }
 
-      const response = await fetch("http://localhost:8000/api/v1/coaching-relationships/", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/coaching-relationships/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -131,7 +131,7 @@ export default function ConnectionsPage() {
         throw new Error("No authentication token available");
       }
 
-      const response = await fetch(`http://localhost:8000/api/v1/coaching-relationships/${relationshipId}/respond`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/coaching-relationships/${relationshipId}/respond`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

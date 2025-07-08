@@ -58,7 +58,7 @@ export default function SessionInsightsPage() {
         throw new Error("No authentication token available");
       }
 
-      const response = await fetch("http://localhost:8000/api/v1/coaching-relationships/", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/coaching-relationships/`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

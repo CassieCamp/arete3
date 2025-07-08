@@ -30,7 +30,7 @@ export const BaselineGenerator: React.FC<BaselineGeneratorProps> = ({ onBaseline
 
       // First, get the current user's ID
       console.log('📡 Fetching user info...');
-      const userResponse = await fetch('http://localhost:8000/api/v1/users/me', {
+      const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/users/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -45,7 +45,7 @@ export const BaselineGenerator: React.FC<BaselineGeneratorProps> = ({ onBaseline
       console.log('✅ Got user ID:', userId);
 
       console.log('📡 Making POST request to generate baseline...');
-      const response = await fetch('http://localhost:8000/api/v1/analysis/generate-baseline', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/analysis/generate-baseline`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

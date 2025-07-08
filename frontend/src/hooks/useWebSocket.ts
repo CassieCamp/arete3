@@ -37,7 +37,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         return;
       }
 
-      const wsUrl = `ws://localhost:8000/api/v1/notifications/ws?token=${encodeURIComponent(token)}`;
+      const wsUrl = `ws://${process.env.NEXT_PUBLIC_API_URL?.replace('http://', '') || 'localhost:8000'}/api/v1/notifications/ws?token=${encodeURIComponent(token)}`;
       console.log('Connecting to WebSocket:', wsUrl);
 
       const ws = new WebSocket(wsUrl);

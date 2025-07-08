@@ -99,7 +99,7 @@ export default function GoalsDashboardPage() {
         return;
       }
 
-      const response = await fetch('http://localhost:8000/api/v1/goals/', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/goals/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -124,7 +124,7 @@ export default function GoalsDashboardPage() {
       const token = await getAuthToken();
       if (!token) return;
 
-      const response = await fetch('http://localhost:8000/api/v1/documents/', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/documents/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -151,7 +151,7 @@ export default function GoalsDashboardPage() {
       const token = await getAuthToken();
       if (!token) throw new Error('Authentication token not available');
 
-      const response = await fetch('http://localhost:8000/api/v1/goals/', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/goals/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -201,7 +201,7 @@ export default function GoalsDashboardPage() {
       // Use all processed documents for suggestions
       const documentIds = documents.map(doc => doc.id);
 
-      const response = await fetch('http://localhost:8000/api/v1/goals/suggestions', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/goals/suggestions`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -234,7 +234,7 @@ export default function GoalsDashboardPage() {
       const token = await getAuthToken();
       if (!token) throw new Error('Authentication token not available');
 
-      const response = await fetch('http://localhost:8000/api/v1/goals/', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/goals/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -272,7 +272,7 @@ export default function GoalsDashboardPage() {
       const token = await getAuthToken();
       if (!token) throw new Error('Authentication token not available');
 
-      const response = await fetch(`http://localhost:8000/api/v1/goals/${goalId}/progress`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/goals/${goalId}/progress`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
