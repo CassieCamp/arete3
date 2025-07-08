@@ -7,7 +7,6 @@ import { PageHeader } from '@/components/navigation/NavigationUtils';
 import { QuickActionsWidget } from '@/components/dashboard/QuickActionsWidget';
 import { ProgressOverviewWidget } from '@/components/dashboard/ProgressOverviewWidget';
 import { DashboardWidget } from '@/components/dashboard/DashboardWidget';
-import { OnboardingGuide } from '@/components/onboarding/OnboardingGuide';
 import { Brain, Activity, TrendingUp, Calendar } from 'lucide-react';
 
 interface DashboardData {
@@ -61,7 +60,6 @@ export default function DashboardPage() {
 
   return (
     <div>
-      {/* <OnboardingGuide /> */}
       <PageHeader />
       
       <div className="space-y-6">

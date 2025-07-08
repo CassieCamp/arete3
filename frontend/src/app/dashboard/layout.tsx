@@ -3,7 +3,6 @@
 import { ReactNode } from 'react';
 import DashboardNav from '@/components/navigation/DashboardNav';
 import { NavigationProvider } from '@/components/navigation/NavigationProvider';
-import { OnboardingGuide } from '@/components/onboarding/OnboardingGuide';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -25,8 +24,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </main>
         </div>
         
-        {/* Onboarding Guide - Shows as overlay when needed */}
-        <OnboardingGuide />
       </div>
     </NavigationProvider>
   );
