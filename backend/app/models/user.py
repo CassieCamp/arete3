@@ -35,11 +35,4 @@ class User(BaseModel):
     clerk_user_id: str
     email: str
     role: str  # "coach" or "client"
-    onboarding_state: Optional[dict] = Field(default_factory=lambda: {
-        "completed": False,
-        "current_step": 0,
-        "steps_completed": [],
-        "started_at": None,
-        "completed_at": None
-    })
     created_at: datetime = Field(default_factory=datetime.utcnow)
