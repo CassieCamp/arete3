@@ -1,8 +1,10 @@
-# Sprint 7 Technical Plan: Transcript-Based Session Insights
+# Session Insights Comprehensive Specification
 
 ## Overview
 
-This plan implements a lightweight MVP for transcript-based session insights that leverages existing AI analysis infrastructure while introducing new session-specific models and workflows. The feature provides coaches with AI-powered analysis of coaching session transcripts, generating ICF-aligned insights to support ongoing client development.
+This specification consolidates the session insights feature implementation, combining the comprehensive technical foundation from Sprint S7 with the unpaired client insights capabilities from Sprint S9. The feature provides coaches and clients with AI-powered analysis of coaching session transcripts, generating ICF-aligned insights to support ongoing development.
+
+The system supports both **paired insights** (linked to coaching relationships) and **unpaired insights** (standalone client insights that can be shared later), making the platform accessible to users at all stages of their coaching journey.
 
 ## Architecture Integration
 
@@ -12,8 +14,9 @@ The feature builds directly on existing infrastructure:
 - Coaching relationship model from [`CoachingRelationship`](../backend/app/models/coaching_relationship.py)
 - Current API patterns from [`/api/v1/endpoints/`](../backend/app/api/v1/endpoints/)
 
-## Core User Workflow
+## Core User Workflows
 
+### Paired Insights Workflow (Traditional)
 ```mermaid
 graph TD
     A[Coach uploads transcript file] --> B[System validates coaching relationship]
@@ -27,32 +30,50 @@ graph TD
     I[New session transcripts] --> A
 ```
 
+### Unpaired Insights Workflow (New)
+```mermaid
+graph TD
+    A[Client uploads transcript without relationship] --> B[Transcript processed & stored]
+    B --> C[AI analysis generates insights]
+    C --> D[Unpaired session insight created]
+    D --> E[Client views private insights]
+    E --> F{Client wants to share?}
+    F -->|Yes| G[Client shares with coach]
+    F -->|No| H[Insights remain private]
+    G --> I[Coach gains access to shared insights]
+```
+
 ## Key Requirements Summary
 
 ### MVP Scope
-- **Input Method**: File upload (leveraging existing document infrastructure)
-- **Relationship Linking**: Session insights linked to specific coaching relationships
+- **Input Methods**: File upload and text input (leveraging existing document infrastructure)
+- **Relationship Linking**: Session insights can be linked to specific coaching relationships OR exist independently
 - **ICF-Aligned Analysis**: Comprehensive insights including celebration, intention, discoveries, goal progress, coaching presence, powerful questions, action items, emotional shifts, values/beliefs, and communication patterns
-- **Access Control**: Both coaches and clients can view insights for their relationships
+- **Flexible Access Control**: 
+  - Paired insights: Both coaches and clients can view insights for their relationships
+  - Unpaired insights: Private to client by default, shareable with coaches
 - **Timeline View**: Chronological display of session insights for each coaching relationship
+- **Sharing System**: Clients can share unpaired insights with coaches with granular permissions
 
 ### Out of Scope for MVP
 - Real-time scheduling or calendar integration
 - In-session note-taking functionality
-- Text paste input (file upload only)
 - Transcript URL import from platforms
+- Bulk sharing operations
+- Advanced permission management beyond basic view/share
+- Insight collaboration features (commenting, co-editing)
 
 ---
 
 ## 1. Database Models & Schemas
 
-### New Model: SessionInsight
+### Updated Model: SessionInsight
 
 ```python
 # backend/app/models/session_insight.py
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from bson import ObjectId
 from enum import Enum
 
@@ -150,10 +171,15 @@ class SessionInsight(BaseModel):
     
     id: Optional[PyObjectId] = Field(default=None, alias="_id")
     
-    # Relationships
-    coaching_relationship_id: str  # Links to CoachingRelationship
-    client_user_id: str  # Client in the relationship
-    coach_user_id: str   # Coach in the relationship
+    # Relationships - NOW OPTIONAL for unpaired insights
+    coaching_relationship_id: Optional[str] = None  # Links to CoachingRelationship
+    client_user_id: str  # Client who owns the insight (always required)
+    coach_user_id: Optional[str] = None   # Coach in the relationship (optional for unpaired)
+    
+    # Unpaired insight support
+    is_unpaired: bool = False  # Flag to identify unpaired insights
+    shared_with_coaches: List[str] = Field(default_factory=list)  # Coach user IDs with access
+    sharing_permissions: Dict[str, Any] = Field(default_factory=dict)  # Granular permissions
     
     # Session Information
     session_date: Optional[datetime] = None  # When the session occurred
@@ -194,25 +220,39 @@ class SessionInsight(BaseModel):
     completed_at: Optional[datetime] = None
 ```
 
-### New Schema: Session Insight Schemas
+### Updated Schemas: Session Insight Schemas
 
 ```python
 # backend/app/schemas/session_insight.py
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 class SessionInsightCreateRequest(BaseModel):
-    coaching_relationship_id: str
+    coaching_relationship_id: Optional[str] = None  # Now optional
     session_date: Optional[str] = None  # ISO format
     session_title: Optional[str] = None
     transcript_text: Optional[str] = None  # For direct text input
 
+class UnpairedSessionInsightCreateRequest(BaseModel):
+    session_date: Optional[str] = None
+    session_title: Optional[str] = None
+    transcript_text: str
+
+class ShareInsightRequest(BaseModel):
+    coach_user_id: str
+    permissions: Dict[str, bool] = {
+        "view": True,
+        "comment": False,
+        "export": False
+    }
+
 class SessionInsightResponse(BaseModel):
     id: str
-    coaching_relationship_id: str
+    coaching_relationship_id: Optional[str] = None
     client_user_id: str
-    coach_user_id: str
+    coach_user_id: Optional[str] = None
+    is_unpaired: bool = False
     session_date: Optional[str] = None
     session_title: Optional[str] = None
     session_summary: str
@@ -244,16 +284,21 @@ class SessionInsightDetailResponse(SessionInsightResponse):
 class SessionInsightListResponse(BaseModel):
     insights: List[SessionInsightResponse]
     total_count: int
-    relationship_id: str
+    relationship_id: Optional[str] = None
     client_name: str
-    coach_name: str
+    coach_name: Optional[str] = None
+
+class MyInsightsResponse(BaseModel):
+    paired_insights: List[SessionInsightResponse]
+    unpaired_insights: List[SessionInsightResponse]
+    total_count: int
 ```
 
 ---
 
 ## 2. API Endpoints
 
-### New Endpoint File: Session Insights
+### Updated Endpoint File: Session Insights
 
 ```python
 # backend/app/api/v1/endpoints/session_insights.py
@@ -261,15 +306,19 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from app.api.v1.deps import get_current_user_clerk_id
 from app.schemas.session_insight import (
     SessionInsightCreateRequest, 
+    UnpairedSessionInsightCreateRequest,
     SessionInsightResponse, 
     SessionInsightDetailResponse,
-    SessionInsightListResponse
+    SessionInsightListResponse,
+    MyInsightsResponse,
+    ShareInsightRequest
 )
 from app.services.session_insight_service import SessionInsightService
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 router = APIRouter()
 
+# Paired insights endpoints (original functionality)
 @router.post("/", response_model=SessionInsightResponse)
 async def create_session_insight_from_file(
     coaching_relationship_id: str = Form(...),
@@ -279,15 +328,12 @@ async def create_session_insight_from_file(
     current_user_id: str = Depends(get_current_user_clerk_id)
 ):
     """
-    Create session insight from uploaded transcript file.
+    Create session insight from uploaded transcript file for a coaching relationship.
     
     Supports common text file formats (txt, docx, pdf) and processes
     them through the existing document processing pipeline.
     """
-    # Validate file type and size
-    # Process transcript content
-    # Create session insight
-    # Return response
+    # Implementation details...
 
 @router.post("/from-text", response_model=SessionInsightResponse) 
 async def create_session_insight_from_text(
@@ -295,14 +341,55 @@ async def create_session_insight_from_text(
     current_user_id: str = Depends(get_current_user_clerk_id)
 ):
     """
-    Create session insight from pasted transcript text.
+    Create session insight from pasted transcript text for a coaching relationship.
     
     Alternative to file upload for direct text input.
     """
-    # Validate relationship access
-    # Process transcript text
-    # Create session insight
-    # Return response
+    # Implementation details...
+
+# Unpaired insights endpoints (new functionality)
+@router.post("/unpaired", response_model=SessionInsightResponse)
+async def create_unpaired_session_insight_from_file(
+    session_date: Optional[str] = Form(None),
+    session_title: Optional[str] = Form(None),
+    transcript_file: UploadFile = File(...),
+    current_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """
+    Create unpaired session insight from uploaded transcript file.
+    
+    Does not require a coaching relationship. Insight is private to the client
+    by default but can be shared with coaches later.
+    """
+    # Implementation details...
+
+@router.post("/unpaired/from-text", response_model=SessionInsightResponse)
+async def create_unpaired_session_insight_from_text(
+    request: UnpairedSessionInsightCreateRequest,
+    current_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """
+    Create unpaired session insight from pasted transcript text.
+    
+    Alternative to file upload for direct text input without coaching relationship.
+    """
+    # Implementation details...
+
+# Unified insights retrieval
+@router.get("/my-insights", response_model=MyInsightsResponse)
+async def get_my_insights(
+    include_unpaired: bool = True,
+    include_paired: bool = True,
+    limit: int = 20,
+    offset: int = 0,
+    current_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """
+    Get all insights for the current user (both paired and unpaired).
+    
+    Returns categorized insights with filtering options.
+    """
+    # Implementation details...
 
 @router.get("/relationship/{relationship_id}", response_model=SessionInsightListResponse)
 async def get_session_insights_for_relationship(
@@ -317,9 +404,7 @@ async def get_session_insights_for_relationship(
     Returns paginated list of insights ordered by session date (newest first).
     Includes summary data and insight counts for list display.
     """
-    # Validate relationship access
-    # Fetch insights with pagination
-    # Return formatted response
+    # Implementation details...
 
 @router.get("/{insight_id}", response_model=SessionInsightDetailResponse)
 async def get_session_insight_detail(
@@ -330,10 +415,36 @@ async def get_session_insight_detail(
     Get detailed view of a specific session insight.
     
     Returns complete insight data including all ICF-aligned analysis sections.
+    Handles both paired and unpaired insights with appropriate access controls.
     """
-    # Validate insight access
-    # Fetch detailed insight data
-    # Return formatted response
+    # Implementation details...
+
+# Sharing endpoints
+@router.post("/{insight_id}/share", response_model=Dict[str, str])
+async def share_insight_with_coach(
+    insight_id: str,
+    request: ShareInsightRequest,
+    current_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """
+    Share an unpaired insight with a coach.
+    
+    Only the insight owner can share insights. Supports granular permissions.
+    """
+    # Implementation details...
+
+@router.delete("/{insight_id}/share/{coach_user_id}")
+async def revoke_insight_sharing(
+    insight_id: str,
+    coach_user_id: str,
+    current_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """
+    Revoke sharing access for a specific coach.
+    
+    Only the insight owner can revoke sharing permissions.
+    """
+    # Implementation details...
 
 @router.delete("/{insight_id}")
 async def delete_session_insight(
@@ -345,9 +456,7 @@ async def delete_session_insight(
     
     Only the creator or coach in the relationship can delete insights.
     """
-    # Validate deletion permissions
-    # Delete insight
-    # Return success response
+    # Implementation details...
 ```
 
 ### API Integration Points
@@ -365,11 +474,11 @@ app.include_router(
 
 ## 3. Services & Business Logic
 
-### New Service: SessionInsightService
+### Updated Service: SessionInsightService
 
 ```python
 # backend/app/services/session_insight_service.py
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from app.models.session_insight import SessionInsight
 from app.repositories.session_insight_repository import SessionInsightRepository
 from app.repositories.coaching_relationship_repository import CoachingRelationshipRepository
@@ -398,7 +507,7 @@ class SessionInsightService:
         source_document_id: Optional[str] = None
     ) -> SessionInsight:
         """
-        Create session insight from transcript content.
+        Create session insight from transcript content for a coaching relationship.
         
         Validates relationship access, processes transcript through AI analysis,
         and creates structured insight record.
@@ -420,6 +529,7 @@ class SessionInsightService:
                 coaching_relationship_id=coaching_relationship_id,
                 client_user_id=relationship.client_user_id,
                 coach_user_id=relationship.coach_user_id,
+                is_unpaired=False,
                 session_date=datetime.fromisoformat(session_date) if session_date else None,
                 session_title=session_title,
                 transcript_source="file_upload" if source_document_id else "text_input",
@@ -429,14 +539,69 @@ class SessionInsightService:
                 created_by=created_by
             )
             
-            # Save pending insight
-            saved_insight = await self.insight_repository.create_insight(pending_insight)
-            logger.info(f"Created pending session insight: {saved_insight.id}")
+            return await self._process_insight(pending_insight, transcript_content)
             
+        except Exception as e:
+            logger.error(f"❌ Error creating session insight: {e}")
+            raise
+
+    async def create_unpaired_insight_from_transcript(
+        self,
+        client_user_id: str,
+        transcript_content: str,
+        session_date: Optional[str] = None,
+        session_title: Optional[str] = None,
+        source_document_id: Optional[str] = None
+    ) -> SessionInsight:
+        """
+        Create unpaired session insight from transcript content.
+        
+        Does not require a coaching relationship. Insight is private to the client
+        by default but can be shared with coaches later.
+        """
+        try:
+            # Create pending unpaired insight record
+            pending_insight = SessionInsight(
+                coaching_relationship_id=None,
+                client_user_id=client_user_id,
+                coach_user_id=None,
+                is_unpaired=True,
+                session_date=datetime.fromisoformat(session_date) if session_date else None,
+                session_title=session_title,
+                transcript_source="file_upload" if source_document_id else "text_input",
+                source_document_id=source_document_id,
+                session_summary="Processing transcript...",
+                status=SessionInsightStatus.PROCESSING,
+                created_by=client_user_id,
+                visible_to_coach=False  # Private by default
+            )
+            
+            return await self._process_insight(pending_insight, transcript_content)
+            
+        except Exception as e:
+            logger.error(f"❌ Error creating unpaired session insight: {e}")
+            raise
+
+    async def _process_insight(
+        self, 
+        pending_insight: SessionInsight, 
+        transcript_content: str
+    ) -> SessionInsight:
+        """
+        Common processing logic for both paired and unpaired insights.
+        """
+        # Save pending insight
+        saved_insight = await self.insight_repository.create_insight(pending_insight)
+        logger.info(f"Created pending session insight: {saved_insight.id}")
+        
+        try:
             # Generate AI analysis
             session_context = {
-                "relationship_duration": "Unknown",  # Could be calculated from relationship
-                "previous_session_count": await self._get_previous_session_count(coaching_relationship_id)
+                "relationship_duration": "Unknown",
+                "previous_session_count": await self._get_previous_session_count(
+                    saved_insight.coaching_relationship_id, saved_insight.client_user_id
+                ),
+                "is_unpaired": saved_insight.is_unpaired
             }
             
             analysis_result = await self.ai_service.generate_session_insights(
@@ -461,13 +626,12 @@ class SessionInsightService:
             return updated_insight
             
         except Exception as e:
-            logger.error(f"❌ Error creating session insight: {e}")
-            # Update insight status to failed if it was created
-            if 'saved_insight' in locals():
-                await self.insight_repository.update_insight(
-                    str(saved_insight.id),
-                    {"status": SessionInsightStatus.FAILED, "processing_error": str(e)}
-                )
+            logger.error(f"❌ Error processing session insight: {e}")
+            # Update insight status to failed
+            await self.insight_repository.update_insight(
+                str(saved_insight.id),
+                {"status": SessionInsightStatus.FAILED, "processing_error": str(e)}
+            )
             raise
     
     async def get_insights_for_relationship(
@@ -496,12 +660,98 @@ class SessionInsightService:
         )
         
         return insights
-    
-    async def _get_previous_session_count(self, relationship_id: str) -> int:
-        """Get count of previous sessions for context"""
-        insights = await self.insight_repository.get_insights_by_relationship(
-            relationship_id, limit=1000, offset=0
+
+    async def get_user_insights(
+        self,
+        user_id: str,
+        include_unpaired: bool = True,
+        include_paired: bool = True,
+        limit: int = 20,
+        offset: int = 0
+    ) -> Dict[str, List[SessionInsight]]:
+        """
+        Get all insights for a user (both paired and unpaired).
+        
+        Returns categorized insights based on their type.
+        """
+        insights = await self.insight_repository.get_insights_by_user(
+            user_id, include_unpaired, include_paired, limit, offset
         )
+        
+        paired_insights = [i for i in insights if not i.is_unpaired]
+        unpaired_insights = [i for i in insights if i.is_unpaired]
+        
+        return {
+            "paired_insights": paired_insights,
+            "unpaired_insights": unpaired_insights
+        }
+
+    async def share_insight_with_coach(
+        self,
+        insight_id: str,
+        client_user_id: str,
+        coach_user_id: str,
+        permissions: Dict[str, bool]
+    ) -> bool:
+        """
+        Share an unpaired insight with a coach.
+        
+        Only the insight owner can share insights.
+        """
+        # Validate insight ownership
+        insight = await self.insight_repository.get_insight_by_id(insight_id)
+        if not insight or insight.client_user_id != client_user_id:
+            raise ValueError("Insight not found or access denied")
+        
+        if not insight.is_unpaired:
+            raise ValueError("Only unpaired insights can be shared")
+        
+        # Update sharing permissions
+        shared_coaches = insight.shared_with_coaches.copy()
+        if coach_user_id not in shared_coaches:
+            shared_coaches.append(coach_user_id)
+        
+        sharing_permissions = insight.sharing_permissions.copy()
+        sharing_permissions[coach_user_id] = permissions
+        
+        success = await self.insight_repository.update_insight(
+            insight_id,
+            {
+                "shared_with_coaches": shared_coaches,
+                "sharing_permissions": sharing_permissions
+            }
+        )
+        
+        return success is not None
+
+    async def get_shared_insights_for_coach(
+        self,
+        coach_user_id: str,
+        limit: int = 20,
+        offset: int = 0
+    ) -> List[SessionInsight]:
+        """
+        Get insights that have been shared with a specific coach.
+        """
+        return await self.insight_repository.get_shared_insights_for_coach(
+            coach_user_id, limit, offset
+        )
+    
+    async def _get_previous_session_count(
+        self, 
+        relationship_id: Optional[str], 
+        client_user_id: str
+    ) -> int:
+        """Get count of previous sessions for context"""
+        if relationship_id:
+            insights = await self.insight_repository.get_insights_by_relationship(
+                relationship_id, limit=1000, offset=0
+            )
+        else:
+            # For unpaired insights, count all insights for the client
+            insights = await self.insight_repository.get_insights_by_user(
+                client_user_id, include_unpaired=True, include_paired=True, limit=1000, offset=0
+            )
         return len(insights)
     
     def _build_insight_from_analysis(
@@ -545,196 +795,11 @@ class SessionInsightService:
         return base_insight
 ```
 
-### Extended AI Service for Session Analysis
-
-```python
-# Addition to backend/app/services/ai_service.py
-
-async def generate_session_insights(
-    self,
-    transcript_content: str,
-    session_context: Dict[str, Any]
-) -> Dict[str, Any]:
-    """
-    Generate comprehensive session insights from transcript.
-    
-    Uses ICF-aligned analysis framework to extract coaching-relevant insights.
-    """
-    start_time = time.time()
-    
-    try:
-        logger.info(f"=== AIService.generate_session_insights called ===")
-        logger.info(f"transcript length: {len(transcript_content)} characters")
-        
-        # Build analysis prompt
-        prompt = self._build_session_analysis_prompt(transcript_content, session_context)
-        
-        # Call AI provider
-        if settings.ai_provider == "anthropic" and self.anthropic_client:
-            result = await self._call_anthropic_for_session(prompt)
-        elif settings.ai_provider == "openai" and self.openai_client:
-            result = await self._call_openai_for_session(prompt)
-        else:
-            raise Exception("No AI provider available for session analysis")
-        
-        processing_time = time.time() - start_time
-        logger.info(f"✅ Session analysis completed in {processing_time:.2f}s")
-        
-        return result
-        
-    except Exception as e:
-        logger.error(f"❌ Error in session analysis: {e}")
-        raise
-
-def _build_session_analysis_prompt(self, transcript: str, context: Dict) -> str:
-    """Build comprehensive session analysis prompt based on ICF competencies"""
-    
-    return f"""
-Analyze this coaching session transcript and extract insights aligned with ICF coaching competencies.
-
-TRANSCRIPT:
-{transcript}
-
-CONTEXT:
-- Client-Coach Relationship: {context.get('relationship_duration', 'Unknown')}
-- Previous Sessions: {context.get('previous_session_count', 0)}
-
-Extract the following insights in JSON format:
-
-{{
-  "celebration": {{
-    "description": "A specific win or achievement to celebrate",
-    "significance": "Why this is meaningful for the client",
-    "evidence": ["Supporting quotes from transcript"]
-  }},
-  "intention": {{
-    "behavior_change": "Specific behavior change discussed",
-    "commitment_level": "Strong/Moderate/Exploratory",
-    "timeline": "When client intends to implement",
-    "support_needed": ["Types of support client identified"]
-  }},
-  "client_discoveries": [
-    {{
-      "insight": "New self-awareness the client gained",
-      "depth_level": "Surface/Moderate/Deep",
-      "emotional_response": "Client's reaction to discovery",
-      "evidence": ["Supporting quotes"]
-    }}
-  ],
-  "goal_progress": [
-    {{
-      "goal_area": "Specific goal or area discussed",
-      "progress_description": "Nature of progress made",
-      "progress_level": "Significant/Moderate/Minimal/Setback",
-      "barriers_identified": ["Obstacles mentioned"],
-      "next_steps": ["Specific actions identified"]
-    }}
-  ],
-  "coaching_presence": {{
-    "client_engagement_level": "High/Moderate/Low",
-    "rapport_quality": "Description of relationship quality",
-    "trust_indicators": ["Evidence of trust in relationship"],
-    "partnership_dynamics": "How coach and client worked together"
-  }},
-  "powerful_questions": [
-    {{
-      "question": "Exact question that had impact",
-      "impact_description": "How it affected the client",
-      "client_response_summary": "Client's response",
-      "breakthrough_level": "Major/Moderate/Minor"
-    }}
-  ],
-  "action_items": [
-    {{
-      "action": "Specific action client committed to",
-      "timeline": "When they'll do it",
-      "accountability_measure": "How progress will be tracked",
-      "client_commitment_level": "High/Medium/Low"
-    }}
-  ],
-  "emotional_shifts": [
-    {{
-      "initial_state": "Client's emotional state at start",
-      "final_state": "Client's emotional state at end",
-      "shift_description": "Nature of the change",
-      "catalyst": "What caused the shift"
-    }}
-  ],
-  "values_beliefs": [
-    {{
-      "type": "Core Value/Limiting Belief/Empowering Belief",
-      "description": "The value or belief identified",
-      "impact_on_goals": "How it affects client's goals",
-      "exploration_depth": "How deeply it was explored"
-    }}
-  ],
-  "communication_patterns": {{
-    "processing_style": "Visual/Auditory/Kinesthetic/Mixed",
-    "expression_patterns": ["How client typically expresses themselves"],
-    "communication_preferences": ["Preferred communication styles"],
-    "notable_changes": ["Any changes from previous patterns"]
-  }},
-  "session_summary": "2-3 sentence overview of the session",
-  "key_themes": ["3-5 main themes from the session"],
-  "overall_session_quality": "Excellent/Good/Average/Needs Improvement"
-}}
-
-ANALYSIS GUIDELINES:
-- Only extract information explicitly present in the transcript
-- Focus on coaching-relevant insights that support client development
-- Maintain confidentiality and professional tone
-- If insufficient evidence exists for any section, omit rather than speculate
-- Prioritize insights that will be valuable for future sessions
-
-Return only valid JSON matching the exact structure above.
-"""
-
-async def _call_anthropic_for_session(self, prompt: str) -> Dict[str, Any]:
-    """Call Anthropic API for session analysis"""
-    try:
-        response = await self.anthropic_client.messages.create(
-            model=settings.ai_model,
-            max_tokens=settings.ai_max_tokens,
-            temperature=settings.ai_temperature,
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-        
-        content = response.content[0].text
-        return json.loads(content)
-        
-    except Exception as e:
-        logger.error(f"Anthropic API error in session analysis: {e}")
-        raise
-
-async def _call_openai_for_session(self, prompt: str) -> Dict[str, Any]:
-    """Call OpenAI API for session analysis"""
-    try:
-        response = await self.openai_client.chat.completions.create(
-            model=settings.ai_model,
-            messages=[
-                {"role": "system", "content": "You are an expert coaching analyst specializing in ICF-aligned session analysis."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=settings.ai_max_tokens,
-            temperature=settings.ai_temperature,
-            timeout=settings.ai_timeout_seconds
-        )
-        
-        content = response.choices[0].message.content
-        return json.loads(content)
-        
-    except Exception as e:
-        logger.error(f"OpenAI API error in session analysis: {e}")
-        raise
-```
-
 ---
 
 ## 4. Repository Layer
 
-### New Repository: SessionInsightRepository
+### Updated Repository: SessionInsightRepository
 
 ```python
 # backend/app/repositories/session_insight_repository.py
@@ -800,6 +865,64 @@ class SessionInsightRepository:
         except Exception as e:
             logger.error(f"Error fetching insights for relationship {relationship_id}: {e}")
             return []
+
+    async def get_insights_by_user(
+        self,
+        user_id: str,
+        include_unpaired: bool = True,
+        include_paired: bool = True,
+        limit: int = 20,
+        offset: int = 0
+    ) -> List[SessionInsight]:
+        """Get session insights for a user (both paired and unpaired)"""
+        try:
+            query_conditions = []
+            
+            if include_unpaired:
+                query_conditions.append({"client_user_id": user_id, "is_unpaired": True})
+            
+            if include_paired:
+                query_conditions.append({"client_user_id": user_id, "is_unpaired": False})
+                query_conditions.append({"coach_user_id": user_id, "is_unpaired": False})
+            
+            if not query_conditions:
+                return []
+            
+            query = {"$or": query_conditions} if len(query_conditions) > 1 else query_conditions[0]
+            
+            cursor = self.collection.find(query).sort("session_date", -1).skip(offset).limit(limit)
+            
+            insights = []
+            async for insight_data in cursor:
+                insights.append(SessionInsight(**insight_data))
+            
+            return insights
+            
+        except Exception as e:
+            logger.error(f"Error fetching insights for user {user_id}: {e}")
+            return []
+
+    async def get_shared_insights_for_coach(
+        self,
+        coach_user_id: str,
+        limit: int = 20,
+        offset: int = 0
+    ) -> List[SessionInsight]:
+        """Get insights that have been shared with a specific coach"""
+        try:
+            cursor = self.collection.find(
+                {"shared_with_coaches": coach_user_id}
+            ).sort("session_date", -1).skip(offset).limit(limit)
+            
+            insights = []
+            async for insight_data in cursor:
+                insights.append(SessionInsight(**insight_data))
+            
+            return insights
+            
+        except Exception as e:
+            logger.error(f"Error fetching shared insights for coach {coach_user_id}: {e}")
+            return []
     
     async def update_insight(self, insight_id: str, update_data: Dict[str, Any]) -> Optional[SessionInsight]:
         """Update session insight"""
@@ -864,9 +987,15 @@ async def create_session_insight_indexes():
     # Index for status queries
     await collection.create_index("status")
     
-    # Index for user access
+    # Index for user access (both paired and unpaired)
     await collection.create_index("coach_user_id")
     await collection.create_index("client_user_id")
+    
+    # Index for unpaired insights
+    await collection.create_index([("client_user_id", 1), ("is_unpaired", 1)])
+    
+    # Index for shared insights
+    await collection.create_index("shared_with_coaches")
     
     logger.info("✅ Session insight indexes created")
 ```
@@ -875,231 +1004,156 @@ async def create_session_insight_indexes():
 
 ## 5. Frontend Components
 
-### New Page: Session Insights Dashboard
+### Updated Page: Session Insights Dashboard
 
 ```typescript
+// frontend/src/app/dashboard/insights/page.tsx
+'use client';
 
-              <Button variant="outline" onClick={onBack}>
-                ← Back to List
+import { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { MyInsightsDashboard } from '@/components/insights/MyInsightsDashboard';
+import { UnpairedInsightUpload } from '@/components/insights/UnpairedInsightUpload';
+import { SessionInsightDetail } from '@/components/insights/SessionInsightDetail';
+import { sessionInsightService } from '@/services/sessionInsightService';
+import { SessionInsight, MyInsightsResponse } from '@/types/sessionInsight';
+
+type ViewState = 'my-insights' | 'relationship-insights' | 'upload-unpaired' | 'upload-paired' | 'detail';
+
+export default function InsightsPage() {
+  const { getToken } = useAuth();
+  const [currentView, setCurrentView] = useState<ViewState>('my-insights');
+  const [selectedInsight, setSelectedInsight] = useState<SessionInsight | null>(null);
+  const [myInsights, setMyInsights] = useState<MyInsightsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadMyInsights();
+  }, []);
+
+  const loadMyInsights = async () => {
+    try {
+      setLoading(true);
+      const token = await getToken();
+      if (token) {
+        const insights = await sessionInsightService.getMyInsights(token);
+        setMyInsights(insights);
+      }
+    } catch (error) {
+      console.error('Error loading insights:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewInsight = (insight: SessionInsight) => {
+    setSelectedInsight(insight);
+    setCurrentView('detail');
+  };
+
+  const handleBackToList = () => {
+    setCurrentView('my-insights');
+    setSelectedInsight(null);
+  };
+
+  const handleUnpairedUploadSuccess = () => {
+    loadMyInsights();
+    setCurrentView('my-insights');
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">Loading insights...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto py-8">
+      {currentView === 'detail' && selectedInsight ? (
+        <SessionInsightDetail 
+          insight={selectedInsight} 
+          onBack={handleBackToList}
+        />
+      ) : currentView === 'upload-unpaired' ? (
+        <div className="max-w-2xl mx-auto">
+          <div className="mb-6">
+            <Button variant="outline" onClick={() => setCurrentView('my-insights')}>
+              ← Back to Insights
+            </Button>
+          </div>
+          <UnpairedInsightUpload onSuccess={handleUnpairedUploadSuccess} />
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold">Session Insights</h1>
+              <p className="text-gray-600 mt-2">
+                AI-powered analysis of your coaching sessions
+              </p>
+            </div>
+            <div className="flex space-x-3">
+              <Button 
+                onClick={() => setCurrentView('upload-unpaired')}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Upload Session
               </Button>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <h4 className="font-semibold mb-2">Session Summary</h4>
-              <p className="text-gray-700">{insight.session_summary}</p>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-2">Key Themes</h4>
-              <div className="flex flex-wrap gap-2">
-                {insight.key_themes.map((theme, index) => (
-                  <Badge key={index} variant="outline">{theme}</Badge>
-                ))}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Celebration & Intention */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {insight.celebration && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                🎉 Celebration
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <h5 className="font-medium text-sm text-gray-700">Achievement</h5>
-                  <p className="text-sm">{insight.celebration.description}</p>
-                </div>
-                <div>
-                  <h5 className="font-medium text-sm text-gray-700">Significance</h5>
-                  <p className="text-sm">{insight.celebration.significance}</p>
-                </div>
-                {insight.celebration.evidence.length > 0 && (
-                  <div>
-                    <h5 className="font-medium text-sm text-gray-700">Evidence</h5>
-                    <ul className="text-sm space-y-1">
-                      {insight.celebration.evidence.map((evidence, index) => (
-                        <li key={index} className="italic text-gray-600">"{evidence}"</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        
-        {insight.intention && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                🎯 Intention
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <h5 className="font-medium text-sm text-gray-700">Behavior Change</h5>
-                  <p className="text-sm">{insight.intention.behavior_change}</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <h5 className="font-medium text-sm text-gray-700">Commitment Level:</h5>
-                  <Badge className={getCommitmentColor(insight.intention.commitment_level)}>
-                    {insight.intention.commitment_level}
-                  </Badge>
-                </div>
-                {insight.intention.timeline && (
-                  <div>
-                    <h5 className="font-medium text-sm text-gray-700">Timeline</h5>
-                    <p className="text-sm">{insight.intention.timeline}</p>
-                  </div>
-                )}
-                {insight.intention.support_needed.length > 0 && (
-                  <div>
-                    <h5 className="font-medium text-sm text-gray-700">Support Needed</h5>
-                    <ul className="text-sm space-y-1">
-                      {insight.intention.support_needed.map((support, index) => (
-                        <li key={index}>• {support}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="all">All Insights</TabsTrigger>
+              <TabsTrigger value="paired">
+                Paired ({myInsights?.paired_insights.length || 0})
+              </TabsTrigger>
+              <TabsTrigger value="unpaired">
+                Unpaired ({myInsights?.unpaired_insights.length || 0})
+              </TabsTrigger>
+            </TabsList>
 
-      {/* Client Discoveries */}
-      {insight.client_discoveries.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              💡 Client Discoveries
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {insight.client_discoveries.map((discovery, index) => (
-                <div key={index} className="border-l-4 border-purple-200 pl-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <h5 className="font-medium">{discovery.insight}</h5>
-                    <Badge variant="outline" className="text-xs">
-                      {discovery.depth_level} depth
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">
-                    <strong>Emotional Response:</strong> {discovery.emotional_response}
-                  </p>
-                  {discovery.evidence.length > 0 && (
-                    <div>
-                      <h6 className="font-medium text-xs text-gray-700 mb-1">Supporting Evidence:</h6>
-                      <ul className="text-xs space-y-1">
-                        {discovery.evidence.map((evidence, evidenceIndex) => (
-                          <li key={evidenceIndex} className="italic text-gray-600">"{evidence}"</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+            <TabsContent value="all" className="mt-6">
+              <MyInsightsDashboard
+                insights={[
+                  ...(myInsights?.paired_insights || []),
+                  ...(myInsights?.unpaired_insights || [])
+                ]}
+                onViewInsight={handleViewInsight}
+                showType={true}
+              />
+            </TabsContent>
+
+            <TabsContent value="paired" className="mt-6">
+              <MyInsightsDashboard
+                insights={myInsights?.paired_insights || []}
+                onViewInsight={handleViewInsight}
+                showType={false}
+              />
+            </TabsContent>
+
+            <TabsContent value="unpaired" className="mt-6">
+              <MyInsightsDashboard
+                insights={myInsights?.unpaired_insights || []}
+                onViewInsight={handleViewInsight}
+                showType={false}
+                showSharing={true}
+              />
+            </TabsContent>
+          </Tabs>
+        </>
       )}
-
-      {/* Goal Progress */}
-      {insight.goal_progress.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              📈 Goal Progress
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {insight.goal_progress.map((progress, index) => (
-                <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                  <div className="flex items-center justify-between mb-2">
-                    <h5 className="font-medium">{progress.goal_area}</h5>
-                    <Badge variant="outline">{progress.progress_level}</Badge>
-                  </div>
-                  <p className="text-sm text-gray-700 mb-3">{progress.progress_description}</p>
-                  
-                  {progress.barriers_identified.length > 0 && (
-                    <div className="mb-3">
-                      <h6 className="font-medium text-sm text-red-700 mb-1">Barriers Identified:</h6>
-                      <ul className="text-sm space-y-1">
-                        {progress.barriers_identified.map((barrier, barrierIndex) => (
-                          <li key={barrierIndex} className="text-red-600">• {barrier}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  {progress.next_steps.length > 0 && (
-                    <div>
-                      <h6 className="font-medium text-sm text-green-700 mb-1">Next Steps:</h6>
-                      <ul className="text-sm space-y-1">
-                        {progress.next_steps.map((step, stepIndex) => (
-                          <li key={stepIndex} className="text-green-600">• {step}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Action Items */}
-      {insight.action_items.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              ✅ Action Items
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {insight.action_items.map((item, index) => (
-                <div key={index} className="flex items-start space-x-3 p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{item.action}</p>
-                    <div className="flex items-center space-x-4 mt-2 text-xs text-gray-600">
-                      {item.timeline && (
-                        <span>⏰ {item.timeline}</span>
-                      )}
-                      {item.accountability_measure && (
-                        <span>📊 {item.accountability_measure}</span>
-                      )}
-                    </div>
-                  </div>
-                  <Badge className={getCommitmentColor(item.client_commitment_level)}>
-                    {item.client_commitment_level}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Additional sections would continue here... */}
     </div>
   );
-};
+}
 ```
 
 ### Navigation Integration
@@ -1110,7 +1164,7 @@ const navigationItems = [
   // ... existing items
   {
     name: 'Session Insights',
-    href: '/dashboard/session-insights',
+    href: '/dashboard/insights',
     icon: '🧠',
     description: 'AI-powered session analysis'
   }
@@ -1123,35 +1177,37 @@ const navigationItems = [
 
 ### Phase 1: Core Infrastructure (Week 1)
 **Days 1-2: Database Models**
-- Create [`SessionInsight`](backend/app/models/session_insight.py) model with all ICF-aligned fields
-- Create [`SessionInsightRepository`](backend/app/repositories/session_insight_repository.py)
+- Update [`SessionInsight`](backend/app/models/session_insight.py) model to support optional relationship fields
+- Add `is_unpaired`, `shared_with_coaches`, `sharing_permissions` fields
+- Create [`SessionInsightRepository`](backend/app/repositories/session_insight_repository.py) with unpaired support
 - Add database indexes for performance
 - Write unit tests for models and repository
 
 **Days 3-4: AI Service Extension**
 - Extend [`AIService`](backend/app/services/ai_service.py) with session analysis capabilities
-- Create comprehensive session analysis prompt based on ICF competencies
+- Update session analysis to work without coaching relationship context
 - Test AI response parsing and validation with sample transcripts
 - Handle edge cases and error scenarios
 
 **Days 5-7: Basic API Endpoints**
-- Create [`session_insights.py`](backend/app/api/v1/endpoints/session_insights.py) endpoint file
-- Implement file upload endpoint (reusing document upload patterns)
-- Add basic CRUD operations with proper validation
+- Update [`session_insights.py`](backend/app/api/v1/endpoints/session_insights.py) endpoint file
+- Implement unpaired insight endpoints (`/unpaired`, `/unpaired/from-text`)
+- Add sharing endpoints (`/share`, `/share/{coach_id}`)
+- Update existing endpoints to handle optional relationship fields
 - Test endpoints with Postman/curl
 
 ### Phase 2: Business Logic (Week 2)
 **Days 1-3: Session Insight Service**
-- Create [`SessionInsightService`](backend/app/services/session_insight_service.py)
-- Implement transcript processing workflow
-- Add relationship validation and permissions
+- Update [`SessionInsightService`](backend/app/services/session_insight_service.py)
+- Implement `create_unpaired_insight_from_transcript()` method
+- Add insight sharing and permission management logic
 - Handle async processing for large transcripts
 
 **Days 4-5: Integration with Existing Systems**
-- Connect with [`CoachingRelationship`](backend/app/models/coaching_relationship.py) model
+- Ensure backward compatibility with existing paired insights
+- Update relationship validation to handle optional fields
 - Leverage existing document processing for file uploads
-- Ensure proper authentication and authorization
-- Test integration points
+- Test integration points thoroughly
 
 **Days 6-7: API Completion**
 - Complete all endpoint implementations
@@ -1161,27 +1217,26 @@ const navigationItems = [
 
 ### Phase 3: Frontend Implementation (Week 3)
 **Days 1-2: Core Components**
-- Create session insights dashboard page
-- Build insight list component with timeline view
-- Implement basic routing and navigation
+- Create [`MyInsightsDashboard`](frontend/src/components/insights/MyInsightsDashboard.tsx) component
+- Build [`UnpairedInsightUpload`](frontend/src/components/insights/UnpairedInsightUpload.tsx) component
+- Update insights dashboard page with tabbed interface
 
-**Days 3-4: Upload & Creation Flow**
-- Build transcript upload component (similar to document upload)
-- Add session metadata input (date, title, etc.)
-- Implement relationship selection
-- Add progress indicators and loading states
+**Days 3-4: Sharing Features**
+- Create [`InsightSharingModal`](frontend/src/components/insights/InsightSharingModal.tsx) component
+- Implement coach selection and permission controls
+- Add sharing status indicators and management
 
-**Days 5-7: Detail View & Polish**
-- Implement insight detail view with ICF-organized sections
-- Add responsive design and mobile optimization
+**Days 5-7: Integration & Polish**
+- Update [`sessionInsightService.ts`](frontend/src/services/sessionInsightService.ts) with new methods
 - Connect frontend to backend APIs
 - Add loading states and error handling
+- Implement responsive design
 
 ### Phase 4: Testing & Refinement (Week 4)
 **Days 1-2: End-to-End Testing**
-- Test complete workflow from upload to insight display
-- Validate AI analysis quality with sample transcripts
-- Test permission and access controls
+- Test complete workflow for both paired and unpaired insights
+- Validate sharing permissions work correctly
+- Test backward compatibility with existing insights
 - Cross-browser compatibility testing
 
 **Days 3-4: Performance Optimization**
@@ -1208,49 +1263,32 @@ const navigationItems = [
 - **API Structure**: Match existing endpoint patterns and response formats
 
 ### New Integrations Required
-- **Coaching Relationships**: Deep integration with [`CoachingRelationship`](backend/app/models/coaching_relationship.py) for access control
+- **Optional Coaching Relationships**: Handle insights with and without coaching relationships
 - **User Profiles**: Connect with [`Profile`](backend/app/models/profile.py) model for coach/client context
+- **Sharing System**: New permission management for unpaired insights
 - **Navigation**: Add session insights to existing dashboard navigation
-
-### API Router Integration
-```python
-# backend/app/main.py - Add to existing includes
-from app.api.v1.endpoints import session_insights
-
-app.include_router(
-    session_insights.router, 
-    prefix="/api/v1/session-insights", 
-    tags=["session-insights"]
-)
-```
 
 ---
 
 ## 8. Technical Considerations
 
 ### Performance
-- **Database Indexing**: Index on `coaching_relationship_id`, `created_at`, and `status` fields
+- **Database Indexing**: Index on `client_user_id`, `is_unpaired`, `shared_with_coaches`, and `status` fields
 - **AI Processing**: Implement async processing for large transcripts with status tracking
-- **Caching**: Cache frequently accessed insights and relationship data
+- **Caching**: Cache frequently accessed insights and sharing permissions
 - **File Processing**: Stream large files to prevent memory issues
 
 ### Security
-- **Access Control**: Ensure coaches can only access insights for their clients
-- **Data Privacy**: Implement proper data handling for sensitive transcript content
-- **Audit Trail**: Track who creates, views, and modifies insights
+- **Access Control**: Ensure proper access controls for both paired and unpaired insights
+- **Data Privacy**: Implement robust data handling for sensitive transcript content
+- **Sharing Permissions**: Granular control over insight sharing with audit trail
 - **File Validation**: Strict validation of uploaded file types and sizes
 
 ### Scalability
-- **Pagination**: Implement proper pagination for insight lists
+- **Pagination**: Implement proper pagination for all insight lists
 - **File Size Limits**: Set reasonable limits for transcript file uploads (10MB)
 - **Rate Limiting**: Prevent abuse of AI analysis endpoints
 - **Background Processing**: Use task queues for AI analysis to prevent timeouts
-
-### Error Handling
-- **AI Failures**: Graceful handling of AI service failures with retry logic
-- **File Processing Errors**: Clear error messages for unsupported files
-- **Network Issues**: Robust error handling for API calls
-- **Validation Errors**: User-friendly validation messages
 
 ---
 
@@ -1263,32 +1301,32 @@ app.include_router(
 - **Error Rate**: <5% error rate across all endpoints
 
 ### User Experience Metrics
-- **Upload Success**: >90% successful transcript uploads
+- **Upload Success**: >90% successful transcript uploads (both paired and unpaired)
 - **Insight Quality**: User satisfaction rating >4/5 for insight relevance
-- **Feature Adoption**: >70% of active coaching relationships use session insights
-- **Time to Value**: Users can view insights within 5 minutes of upload
+- **Feature Adoption**: >70% of users try unpaired insights within first month
+- **Sharing Usage**: >30% of unpaired insights are shared with coaches
 
 ### Business Metrics
-- **Engagement**: Increased session frequency in relationships using insights
-- **Retention**: Higher coach/client retention rates with insight usage
-- **Feedback Quality**: Improved coaching effectiveness scores
-- **Feature Usage**: Regular usage (weekly) by >50% of active users
+- **User Onboarding**: Increased user registration through unpaired insights
+- **Engagement**: Higher session frequency and platform usage
+- **Conversion**: >40% of unpaired users form coaching relationships within 3 months
+- **Retention**: Higher user retention rates with insight usage
 
 ---
 
 ## 10. Future Enhancements (Post-MVP)
 
 ### Phase 2 Features
-- **Text Input**: Direct transcript paste functionality
-- **Bulk Upload**: Multiple session upload capability
+- **Bulk Operations**: Multiple session upload and bulk sharing capabilities
+- **Advanced Permissions**: More granular sharing controls and time-limited access
 - **Insight Trends**: Progress tracking across multiple sessions
 - **Export Features**: PDF export of insights and trends
 
 ### Phase 3 Features
 - **Integration APIs**: Connect with Zoom, Teams, etc. for automatic transcript import
 - **Real-time Analysis**: Live session analysis capabilities
-- **Custom Prompts**: Coach-specific analysis templates
-- **Client Self-Service**: Client-initiated session uploads
+- **Custom Prompts**: User-specific analysis templates
+- **Collaboration Features**: Commenting and co-editing on insights
 
 ### Advanced Analytics
 - **Longitudinal Analysis**: Track client development over time
@@ -1298,4 +1336,4 @@ app.include_router(
 
 ---
 
-This comprehensive technical plan provides a roadmap for implementing transcript-based session insights while leveraging existing infrastructure and maintaining consistency with current architectural patterns. The phased approach ensures manageable development cycles while building toward a robust, ICF-aligned coaching analysis system that will significantly enhance the coaching experience for both coaches and clients.
+This comprehensive specification provides a complete roadmap for implementing both paired and unpaired session insights, ensuring the `coaching_relationship_id` field is optional as implemented in Sprint S9 while maintaining all the rich technical details and ICF-aligned analysis capabilities from Sprint S7. The unified approach supports users at all stages of their coaching journey while maintaining backward compatibility with existing functionality.

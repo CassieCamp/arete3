@@ -445,3 +445,257 @@ Return only valid JSON matching the exact structure above.
         except Exception as e:
             logger.error(f"❌ Error sending insight notifications: {e}")
             # Don't raise the error as the insight was created successfully
+
+    async def create_unpaired_insight_from_transcript(
+        self,
+        client_user_id: str,
+        transcript_content: str,
+        session_date: Optional[str] = None,
+        session_title: Optional[str] = None,
+        source_document_id: Optional[str] = None
+    ) -> SessionInsight:
+        """
+        Create unpaired session insight from transcript content.
+        
+        Creates insights without requiring a coaching relationship.
+        """
+        try:
+            logger.info(f"=== SessionInsightService.create_unpaired_insight_from_transcript called ===")
+            logger.info(f"client_user_id: {client_user_id}")
+            
+            # Create pending unpaired insight record
+            pending_insight = SessionInsight(
+                coaching_relationship_id=None,  # No relationship for unpaired insights
+                client_user_id=client_user_id,
+                coach_user_id=None,  # No coach for unpaired insights
+                session_date=datetime.fromisoformat(session_date.replace('Z', '+00:00')) if session_date else None,
+                session_title=session_title,
+                transcript_source="file_upload" if source_document_id else "text_input",
+                source_document_id=source_document_id,
+                session_summary="Processing transcript...",
+                overall_session_quality="Average",  # Default value, will be updated after AI analysis
+                status=SessionInsightStatus.PROCESSING,
+                created_by=client_user_id,
+                is_unpaired=True,  # Mark as unpaired
+                shared_with_coaches=[],  # Empty initially
+                sharing_permissions={}  # Empty initially
+            )
+            
+            # Save pending insight
+            saved_insight = await self.insight_repository.create_insight(pending_insight)
+            logger.info(f"Created pending unpaired session insight: {saved_insight.id}")
+            
+            # Generate AI analysis (no relationship context needed)
+            session_context = {
+                "relationship_duration": "N/A - Unpaired Insight",
+                "previous_session_count": 0  # No previous sessions for unpaired insights
+            }
+            
+            analysis_result = await self._generate_session_insights(
+                transcript_content,
+                session_context
+            )
+            
+            # Update insight with analysis results
+            completed_insight = self._build_insight_from_analysis(
+                saved_insight,
+                analysis_result,
+                transcript_content
+            )
+            
+            # Save completed insight
+            updated_insight = await self.insight_repository.update_insight(
+                str(saved_insight.id),
+                completed_insight.model_dump(exclude={"id"})
+            )
+            
+            logger.info(f"✅ Successfully generated unpaired session insight: {updated_insight.id}")
+            
+            # Send notification only to the client (no coach for unpaired insights)
+            await self._send_unpaired_insight_notification(updated_insight)
+            
+            return updated_insight
+            
+        except Exception as e:
+            logger.error(f"❌ Error creating unpaired session insight: {e}")
+            # Update insight status to failed if it was created
+            if 'saved_insight' in locals():
+                await self.insight_repository.update_insight(
+                    str(saved_insight.id),
+                    {"status": SessionInsightStatus.FAILED, "processing_error": str(e)}
+                )
+            raise
+
+    async def get_user_insights(
+        self,
+        user_id: str,
+        include_unpaired: bool = True,
+        include_paired: bool = True,
+        limit: int = 20,
+        offset: int = 0
+    ) -> List[SessionInsight]:
+        """
+        Get all insights for a user (both paired and unpaired).
+        """
+        try:
+            logger.info(f"=== SessionInsightService.get_user_insights called ===")
+            logger.info(f"user_id: {user_id}, include_unpaired: {include_unpaired}, include_paired: {include_paired}")
+            
+            insights = await self.insight_repository.get_insights_by_user(
+                user_id=user_id,
+                include_unpaired=include_unpaired,
+                include_paired=include_paired,
+                limit=limit,
+                offset=offset
+            )
+            
+            logger.info(f"✅ Retrieved {len(insights)} insights for user")
+            return insights
+            
+        except Exception as e:
+            logger.error(f"❌ Error fetching user insights: {e}")
+            raise
+
+    async def share_insight_with_coach(
+        self,
+        insight_id: str,
+        client_user_id: str,
+        coach_user_id: str,
+        permissions: Dict[str, bool]
+    ) -> bool:
+        """
+        Share an unpaired insight with a coach.
+        """
+        try:
+            logger.info(f"=== SessionInsightService.share_insight_with_coach called ===")
+            logger.info(f"insight_id: {insight_id}, client: {client_user_id}, coach: {coach_user_id}")
+            
+            # Get the insight to verify ownership and that it's unpaired
+            insight = await self.insight_repository.get_insight_by_id(insight_id)
+            if not insight:
+                raise ValueError("Insight not found")
+            
+            # Verify the client owns this insight
+            if insight.client_user_id != client_user_id:
+                raise ValueError("User not authorized to share this insight")
+            
+            # Verify it's an unpaired insight
+            if not insight.is_unpaired:
+                raise ValueError("Only unpaired insights can be shared")
+            
+            # Add coach to shared list if not already there
+            shared_coaches = insight.shared_with_coaches or []
+            if coach_user_id not in shared_coaches:
+                shared_coaches.append(coach_user_id)
+            
+            # Update sharing permissions
+            sharing_permissions = insight.sharing_permissions or {}
+            sharing_permissions[coach_user_id] = permissions
+            
+            # Update the insight
+            success = await self.insight_repository.update_insight(
+                insight_id,
+                {
+                    "shared_with_coaches": shared_coaches,
+                    "sharing_permissions": sharing_permissions
+                }
+            )
+            
+            if success:
+                logger.info(f"✅ Successfully shared insight with coach")
+                # Send notification to coach about shared insight
+                await self._send_insight_shared_notification(insight_id, coach_user_id, client_user_id)
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"❌ Error sharing insight with coach: {e}")
+            raise
+
+    async def unshare_insight_with_coach(
+        self,
+        insight_id: str,
+        client_user_id: str,
+        coach_user_id: str
+    ) -> bool:
+        """
+        Remove sharing access for a coach from an unpaired insight.
+        """
+        try:
+            logger.info(f"=== SessionInsightService.unshare_insight_with_coach called ===")
+            logger.info(f"insight_id: {insight_id}, client: {client_user_id}, coach: {coach_user_id}")
+            
+            # Get the insight to verify ownership
+            insight = await self.insight_repository.get_insight_by_id(insight_id)
+            if not insight:
+                raise ValueError("Insight not found")
+            
+            # Verify the client owns this insight
+            if insight.client_user_id != client_user_id:
+                raise ValueError("User not authorized to modify sharing for this insight")
+            
+            # Remove coach from shared list
+            shared_coaches = insight.shared_with_coaches or []
+            if coach_user_id in shared_coaches:
+                shared_coaches.remove(coach_user_id)
+            
+            # Remove sharing permissions
+            sharing_permissions = insight.sharing_permissions or {}
+            if coach_user_id in sharing_permissions:
+                del sharing_permissions[coach_user_id]
+            
+            # Update the insight
+            success = await self.insight_repository.update_insight(
+                insight_id,
+                {
+                    "shared_with_coaches": shared_coaches,
+                    "sharing_permissions": sharing_permissions
+                }
+            )
+            
+            if success:
+                logger.info(f"✅ Successfully unshared insight with coach")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"❌ Error unsharing insight with coach: {e}")
+            raise
+
+    async def _send_unpaired_insight_notification(self, insight: SessionInsight):
+        """Send notification when unpaired session insight is completed"""
+        try:
+            from app.services.notification_service import NotificationService
+            notification_service = NotificationService()
+            
+            # Notify only the client for unpaired insights
+            await notification_service.notify_session_insight_completed(
+                user_id=insight.client_user_id,
+                insight_id=str(insight.id),
+                session_title=insight.session_title
+            )
+                
+            logger.info(f"✅ Sent notification for unpaired session insight: {insight.id}")
+            
+        except Exception as e:
+            logger.error(f"❌ Error sending unpaired insight notification: {e}")
+            # Don't raise the error as the insight was created successfully
+
+    async def _send_insight_shared_notification(self, insight_id: str, coach_user_id: str, client_user_id: str):
+        """Send notification when insight is shared with coach"""
+        try:
+            from app.services.notification_service import NotificationService
+            notification_service = NotificationService()
+            
+            # Notify the coach about the shared insight
+            await notification_service.notify_insight_shared(
+                user_id=coach_user_id,
+                insight_id=insight_id,
+                client_user_id=client_user_id
+            )
+                
+            logger.info(f"✅ Sent shared insight notification to coach: {coach_user_id}")
+            
+        except Exception as e:
+            logger.error(f"❌ Error sending insight shared notification: {e}")
+            # Don't raise the error as the sharing was successful

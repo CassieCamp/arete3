@@ -9,6 +9,8 @@ import { sessionInsightService, SessionInsight, SessionInsightListResponse } fro
 import { InsightSubmissionComponent } from "@/components/insights/InsightSubmissionComponent";
 import { InsightsTimelineComponent } from "@/components/insights/InsightsTimelineComponent";
 import { InsightDetailView } from "@/components/insights/InsightDetailView";
+import { MyInsightsDashboard } from "@/components/insights/MyInsightsDashboard";
+import { UnpairedInsightUpload } from "@/components/insights/UnpairedInsightUpload";
 import { PageHeader } from "@/components/navigation/NavigationUtils";
 
 interface CoachingRelationship {
@@ -39,7 +41,7 @@ export default function SessionInsightsPage() {
   const [selectedRelationship, setSelectedRelationship] = useState<CoachingRelationship | null>(null);
   const [insights, setInsights] = useState<SessionInsightListResponse | null>(null);
   const [selectedInsight, setSelectedInsight] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<'selection' | 'timeline' | 'submission' | 'detail'>('selection');
+  const [currentView, setCurrentView] = useState<'my-insights' | 'selection' | 'timeline' | 'submission' | 'detail' | 'upload-unpaired'>('my-insights');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -132,6 +134,30 @@ export default function SessionInsightsPage() {
     setCurrentView('selection');
   };
 
+  const handleBackToMyInsights = () => {
+    setSelectedRelationship(null);
+    setInsights(null);
+    setSelectedInsight(null);
+    setCurrentView('my-insights');
+  };
+
+  const handleCreateUnpairedInsight = () => {
+    setCurrentView('upload-unpaired');
+  };
+
+  const handleUnpairedInsightCreated = () => {
+    setCurrentView('my-insights');
+  };
+
+  const handleViewInsight = (insight: SessionInsight) => {
+    setSelectedInsight(insight.id);
+    setCurrentView('detail');
+  };
+
+  const handleViewRelationshipInsights = () => {
+    setCurrentView('selection');
+  };
+
   const getOtherUserName = (relationship: CoachingRelationship) => {
     if (relationship.coach_user_id === user?.id) {
       return relationship.client_email || `Client ${relationship.client_user_id}`;
@@ -211,9 +237,66 @@ export default function SessionInsightsPage() {
           </div>
         )}
 
+        {/* My Insights Dashboard View */}
+        {currentView === 'my-insights' && (
+          <div className="space-y-6">
+            {/* Navigation Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold">Insights</h1>
+                <p className="text-gray-600">Manage your personal insights and coaching relationships</p>
+              </div>
+              <Button
+                onClick={handleViewRelationshipInsights}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                View Relationship Insights
+              </Button>
+            </div>
+            
+            <MyInsightsDashboard
+              onCreateNew={handleCreateUnpairedInsight}
+              onViewInsight={handleViewInsight}
+            />
+          </div>
+        )}
+
+        {/* Unpaired Insight Upload View */}
+        {currentView === 'upload-unpaired' && (
+          <div className="space-y-6">
+            {/* Navigation */}
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={handleBackToMyInsights}
+                variant="outline"
+                size="sm"
+              >
+                ← Back to My Insights
+              </Button>
+            </div>
+            
+            <UnpairedInsightUpload
+              onSuccess={handleUnpairedInsightCreated}
+              onCancel={handleBackToMyInsights}
+            />
+          </div>
+        )}
+
         {/* Relationship Selection View */}
         {currentView === 'selection' && (
           <div className="space-y-6">
+            {/* Navigation */}
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={handleBackToMyInsights}
+                variant="outline"
+                size="sm"
+              >
+                ← Back to My Insights
+              </Button>
+            </div>
+            
             <Card>
               <CardHeader>
                 <CardTitle>Select a Coaching Relationship</CardTitle>
@@ -304,10 +387,23 @@ export default function SessionInsightsPage() {
 
         {/* Detail View */}
         {currentView === 'detail' && selectedInsight && (
-          <InsightDetailView
-            insightId={selectedInsight}
-            onBack={handleBackToTimeline}
-          />
+          <div className="space-y-6">
+            {/* Navigation */}
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={selectedRelationship ? handleBackToTimeline : handleBackToMyInsights}
+                variant="outline"
+                size="sm"
+              >
+                ← Back to {selectedRelationship ? 'Timeline' : 'My Insights'}
+              </Button>
+            </div>
+            
+            <InsightDetailView
+              insightId={selectedInsight}
+              onBack={selectedRelationship ? handleBackToTimeline : handleBackToMyInsights}
+            />
+          </div>
         )}
       </div>
     </div>

@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Arete MVP Frontend
 
-## Getting Started
+This is the frontend application for Arete MVP, a coaching platform that connects coaches and clients through AI-powered insights and document analysis.
 
-First, run the development server:
+## Technology Stack
+
+- **Framework**: Next.js 15 with App Router
+- **Authentication**: Clerk
+- **Styling**: Tailwind CSS
+- **UI Components**: Radix UI primitives
+- **Forms**: React Hook Form with Zod validation
+- **Language**: TypeScript
+
+## Key Features
+
+- **Dashboard**: Centralized view for coaches and clients
+- **Document Management**: Upload and analyze coaching documents
+- **Session Insights**: AI-powered analysis of coaching sessions
+- **Goal Tracking**: Set and monitor coaching goals
+- **Relationship Management**: Connect coaches with clients
+- **Real-time Notifications**: Stay updated on coaching activities
+
+## Development Setup
+
+For complete setup instructions, please refer to the main [DEVELOPMENT.md](../DEVELOPMENT.md) file in the project root.
+
+### Quick Start
 
 ```bash
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The application will be available at [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+├── app/                    # Next.js App Router pages
+│   ├── dashboard/         # Main dashboard and features
+│   ├── profile/           # User profile management
+│   ├── waitlist/          # Beta access waitlist
+│   └── layout.tsx         # Root layout with Clerk provider
+├── components/            # Reusable React components
+│   ├── ui/               # Base UI components (buttons, forms, etc.)
+│   ├── dashboard/        # Dashboard-specific components
+│   ├── insights/         # Session insights components
+│   └── navigation/       # Navigation components
+├── services/             # API client services
+├── hooks/                # Custom React hooks
+├── lib/                  # Utility functions and configurations
+└── utils/                # Helper functions
+```
 
-## Learn More
+## Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+Create a `.env.local` file in the frontend directory with:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_API_URL=http://0.0.0.0:8000
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Available Scripts
 
-## Deploy on Vercel
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Authentication
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The application uses Clerk for authentication with support for:
+- Email/password authentication
+- Social login providers
+- Organization management for coaching relationships
+- Role-based access control (coaches vs clients)
+
+## API Integration
+
+The frontend communicates with the FastAPI backend through service modules located in `src/services/`. These services handle:
+- User management
+- Document operations
+- Session insights
+- Goal tracking
+- Notifications
+
+For backend setup and API documentation, see the main [DEVELOPMENT.md](../DEVELOPMENT.md) file.

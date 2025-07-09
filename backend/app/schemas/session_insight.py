@@ -10,11 +10,27 @@ class SessionInsightCreateRequest(BaseModel):
     transcript_text: Optional[str] = None  # For direct text input
 
 
+class UnpairedSessionInsightCreateRequest(BaseModel):
+    session_date: Optional[str] = None
+    session_title: Optional[str] = None
+    transcript_text: str
+
+
+class ShareInsightRequest(BaseModel):
+    coach_user_id: str
+    permissions: Dict[str, bool] = {
+        "view": True,
+        "comment": False,
+        "export": False
+    }
+
+
 class SessionInsightResponse(BaseModel):
     id: str
-    coaching_relationship_id: str
+    coaching_relationship_id: Optional[str] = None
     client_user_id: str
-    coach_user_id: str
+    coach_user_id: Optional[str] = None
+    is_unpaired: bool = False
     session_date: Optional[str] = None
     session_title: Optional[str] = None
     session_summary: str

@@ -131,10 +131,15 @@ class SessionInsight(BaseModel):
     
     id: Optional[PyObjectId] = Field(default=None, alias="_id")
     
-    # Relationships
-    coaching_relationship_id: str  # Links to CoachingRelationship
-    client_user_id: str  # Client in the relationship
-    coach_user_id: str   # Coach in the relationship
+    # Relationships - Made optional for unpaired insights
+    coaching_relationship_id: Optional[str] = None  # Links to CoachingRelationship
+    client_user_id: str  # Client in the relationship (always required)
+    coach_user_id: Optional[str] = None   # Coach in the relationship (optional for unpaired)
+    
+    # Unpaired insight fields
+    is_unpaired: bool = False  # Flag to identify unpaired insights
+    shared_with_coaches: List[str] = Field(default_factory=list)  # Coach user IDs with access
+    sharing_permissions: Dict[str, Any] = Field(default_factory=dict)  # Granular permissions
     
     # Session Information
     session_date: Optional[datetime] = None  # When the session occurred

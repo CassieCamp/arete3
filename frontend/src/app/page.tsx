@@ -157,20 +157,20 @@ export default function Home() {
 
       {/* Discovery Conversation Section */}
       <section className="py-16 bg-white min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-            {/* Left Column - Text Content */}
-            <div className="lg:pr-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+          <div className="space-y-12">
+            {/* Text Content - Now stacked above */}
+            <div className="text-center">
               <h2 className="text-3xl md:text-4xl font-serif font-bold text-midnight-indigo mb-8">
                 What's Top of Mind for You?
               </h2>
-              <p className="text-base md:text-lg text-owlet-teal leading-loose">
+              <p className="text-base md:text-lg text-owlet-teal leading-loose max-w-3xl mx-auto">
                 We want to hear from you! Are you an executive coach, HR or people operations leader, or a leader who has had a transformative coaching experience? We're building the future of executive coaching, and that means we need to understand what truly matters to you. If you'd like to share your insights and help shape this vision, we'd love to chat.
               </p>
             </div>
 
-            {/* Right Column - Form */}
-            <div className="lg:pl-8">
+            {/* Form - Now below the text */}
+            <div className="max-w-2xl mx-auto">
               <Card className="border-cloud-grey/30 shadow-lg overflow-visible">
                 <CardContent className="p-8 space-y-6">
               {isSubmitted ? (

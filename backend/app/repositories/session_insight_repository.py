@@ -132,18 +132,48 @@ class SessionInsightRepository:
     async def get_insights_by_user(
         self,
         user_id: str,
+        include_unpaired: bool = True,
+        include_paired: bool = True,
         limit: int = 20,
         offset: int = 0
     ) -> List[SessionInsight]:
         """Get session insights where user is either coach or client"""
         try:
             db = get_database()
-            cursor = db[self.collection_name].find({
-                "$or": [
-                    {"coach_user_id": user_id},
-                    {"client_user_id": user_id}
-                ]
-            }).sort("created_at", -1).skip(offset).limit(limit)
+            
+            # Build query based on what to include
+            query_conditions = []
+            
+            if include_paired:
+                # Include paired insights where user is coach or client
+                query_conditions.append({
+                    "$and": [
+                        {"is_unpaired": {"$ne": True}},
+                        {"$or": [
+                            {"coach_user_id": user_id},
+                            {"client_user_id": user_id}
+                        ]}
+                    ]
+                })
+            
+            if include_unpaired:
+                # Include unpaired insights where user is client or has shared access
+                query_conditions.append({
+                    "$and": [
+                        {"is_unpaired": True},
+                        {"$or": [
+                            {"client_user_id": user_id},
+                            {"shared_with_coaches": user_id}
+                        ]}
+                    ]
+                })
+            
+            if not query_conditions:
+                return []
+            
+            query = {"$or": query_conditions} if len(query_conditions) > 1 else query_conditions[0]
+            
+            cursor = db[self.collection_name].find(query).sort("created_at", -1).skip(offset).limit(limit)
             
             insights = []
             async for insight_data in cursor:
@@ -157,3 +187,55 @@ class SessionInsightRepository:
         except Exception as e:
             logger.error(f"Error fetching insights for user {user_id}: {e}")
             return []
+
+    async def get_shared_insights_for_coach(
+        self,
+        coach_user_id: str,
+        limit: int = 20,
+        offset: int = 0
+    ) -> List[SessionInsight]:
+        """Get unpaired insights shared with a specific coach"""
+        try:
+            db = get_database()
+            cursor = db[self.collection_name].find({
+                "is_unpaired": True,
+                "shared_with_coaches": coach_user_id
+            }).sort("created_at", -1).skip(offset).limit(limit)
+            
+            insights = []
+            async for insight_data in cursor:
+                # Convert ObjectId to string for Pydantic model
+                if "_id" in insight_data:
+                    insight_data["_id"] = str(insight_data["_id"])
+                insights.append(SessionInsight(**insight_data))
+            
+            return insights
+            
+        except Exception as e:
+            logger.error(f"Error fetching shared insights for coach {coach_user_id}: {e}")
+            return []
+
+    async def update_sharing_permissions(
+        self,
+        insight_id: str,
+        shared_with_coaches: List[str]
+    ) -> bool:
+        """Update sharing permissions for an insight"""
+        try:
+            if not ObjectId.is_valid(insight_id):
+                return False
+            
+            db = get_database()
+            result = await db[self.collection_name].update_one(
+                {"_id": ObjectId(insight_id)},
+                {"$set": {
+                    "shared_with_coaches": shared_with_coaches,
+                    "updated_at": datetime.utcnow()
+                }}
+            )
+            
+            return result.modified_count > 0
+            
+        except Exception as e:
+            logger.error(f"Error updating sharing permissions for insight {insight_id}: {e}")
+            return False

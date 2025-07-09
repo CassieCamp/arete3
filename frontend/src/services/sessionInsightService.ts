@@ -75,21 +75,25 @@ export interface CommunicationPattern {
 
 export interface SessionInsight {
   id: string;
-  coaching_relationship_id: string;
+  coaching_relationship_id?: string;
   client_user_id: string;
-  coach_user_id: string;
+  coach_user_id?: string;
   session_date?: string;
   session_title?: string;
-  session_summary: string;
+  session_summary?: string;
   key_themes: string[];
-  overall_session_quality: string;
+  overall_session_quality?: string;
   status: string;
   created_at: string;
   completed_at?: string;
-  celebration_count: number;
-  intention_count: number;
-  discovery_count: number;
-  action_item_count: number;
+  celebration_count?: number;
+  intention_count?: number;
+  discovery_count?: number;
+  action_item_count?: number;
+  // Additional properties for unpaired insights
+  title?: string;
+  content?: string;
+  shared_with?: string[];
 }
 
 export interface SessionInsightDetail extends SessionInsight {
@@ -118,6 +122,29 @@ export interface SessionInsightListResponse {
   relationship_id: string;
   client_name: string;
   coach_name: string;
+}
+
+// New interfaces for unpaired insights
+export interface CreateUnpairedInsightRequest {
+  title: string;
+  content: string;
+  tags?: string[];
+}
+
+export interface CreateUnpairedTranscriptInsightRequest {
+  session_date?: string;
+  session_title?: string;
+  transcript_text: string;
+}
+
+export interface ShareInsightRequest {
+  coach_email: string;
+  message?: string;
+}
+
+export interface MyInsightsResponse {
+  my_insights: SessionInsight[];
+  shared_with_me: SessionInsight[];
 }
 
 class SessionInsightService {
@@ -245,6 +272,136 @@ class SessionInsightService {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
     }
+  }
+
+  // New methods for unpaired insights
+  async createUnpairedInsight(
+    token: string,
+    data: CreateUnpairedInsightRequest
+  ): Promise<SessionInsight> {
+    const headers = await this.getAuthHeaders(token);
+    
+    const response = await fetch(`${this.baseUrl}/api/v1/session-insights/unpaired/from-text`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  async createUnpairedInsightFromTranscript(
+    token: string,
+    data: CreateUnpairedTranscriptInsightRequest
+  ): Promise<SessionInsight> {
+    const headers = await this.getAuthHeaders(token);
+    
+    const response = await fetch(`${this.baseUrl}/api/v1/session-insights/unpaired/from-text`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  async createUnpairedInsightFromFile(
+    token: string,
+    data: {
+      session_date?: string;
+      session_title?: string;
+      transcript_file: File;
+    }
+  ): Promise<SessionInsight> {
+    const formData = new FormData();
+    if (data.session_date) {
+      formData.append('session_date', data.session_date);
+    }
+    if (data.session_title) {
+      formData.append('session_title', data.session_title);
+    }
+    formData.append('transcript_file', data.transcript_file);
+
+    const response = await fetch(`${this.baseUrl}/api/v1/session-insights/unpaired/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  async getMyInsights(token: string): Promise<SessionInsight[]> {
+    const headers = await this.getAuthHeaders(token);
+    
+    const response = await fetch(`${this.baseUrl}/api/v1/session-insights/my-insights`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  async shareInsight(
+    token: string,
+    insightId: string,
+    data: ShareInsightRequest
+  ): Promise<void> {
+    const headers = await this.getAuthHeaders(token);
+    
+    const response = await fetch(`${this.baseUrl}/api/v1/session-insights/${insightId}/share`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    }
+  }
+
+  async updateInsight(
+    token: string,
+    insightId: string,
+    data: Partial<CreateUnpairedInsightRequest>
+  ): Promise<SessionInsight> {
+    const headers = await this.getAuthHeaders(token);
+    
+    const response = await fetch(`${this.baseUrl}/api/v1/session-insights/${insightId}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
   }
 }
 

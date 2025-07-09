@@ -2,11 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from typing import Optional, List
 from app.api.v1.deps import get_current_user_clerk_id
 from app.schemas.session_insight import (
-    SessionInsightCreateRequest, 
-    SessionInsightResponse, 
+    SessionInsightCreateRequest,
+    SessionInsightResponse,
     SessionInsightDetailResponse,
     SessionInsightListResponse,
-    SessionInsightUpdateRequest
+    SessionInsightUpdateRequest,
+    UnpairedSessionInsightCreateRequest,
+    ShareInsightRequest
 )
 from app.services.session_insight_service import SessionInsightService
 from app.services.text_extraction_service import TextExtractionService
@@ -240,6 +242,236 @@ async def get_session_insights_for_relationship(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve session insights"
+        )
+
+
+@router.post("/unpaired/from-text", response_model=SessionInsightResponse)
+async def create_unpaired_session_insight_from_text(
+    request: UnpairedSessionInsightCreateRequest,
+    current_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """
+    Create unpaired session insight from pasted transcript text.
+    
+    Creates insights without requiring a coaching relationship.
+    """
+    try:
+        logger.info(f"=== create_unpaired_session_insight_from_text called ===")
+        logger.info(f"user: {current_user_id}")
+        
+        if not request.transcript_text or len(request.transcript_text.strip()) < 50:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Transcript text is required and must be at least 50 characters"
+            )
+        
+        # Create unpaired session insight
+        session_insight_service = SessionInsightService()
+        insight = await session_insight_service.create_unpaired_insight_from_transcript(
+            client_user_id=current_user_id,
+            transcript_content=request.transcript_text,
+            session_date=request.session_date,
+            session_title=request.session_title
+        )
+        
+        # Convert to response format
+        response = _convert_to_response(insight)
+        logger.info(f"✅ Successfully created unpaired session insight: {insight.id}")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error creating unpaired session insight from text: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to process transcript text"
+        )
+
+
+@router.post("/unpaired/", response_model=SessionInsightResponse)
+async def create_unpaired_session_insight_from_file(
+    session_date: Optional[str] = Form(None),
+    session_title: Optional[str] = Form(None),
+    transcript_file: UploadFile = File(...),
+    current_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """
+    Create unpaired session insight from uploaded transcript file.
+    
+    Creates insights without requiring a coaching relationship.
+    """
+    try:
+        logger.info(f"=== create_unpaired_session_insight_from_file called ===")
+        logger.info(f"user: {current_user_id}")
+        
+        # Validate file type and size
+        allowed_types = ["text/plain", "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
+        if transcript_file.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported file type. Allowed types: {', '.join(allowed_types)}"
+            )
+        
+        # Check file size (10MB limit)
+        max_size = 10 * 1024 * 1024  # 10MB
+        file_content = await transcript_file.read()
+        if len(file_content) > max_size:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File size exceeds 10MB limit"
+            )
+        
+        # Extract text from file
+        text_extraction_service = TextExtractionService()
+        transcript_content = await text_extraction_service.extract_text_from_bytes(
+            file_content,
+            transcript_file.filename or "transcript.txt"
+        )
+        
+        if not transcript_content or len(transcript_content.strip()) < 50:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Transcript content is too short or could not be extracted"
+            )
+        
+        # Create unpaired session insight
+        session_insight_service = SessionInsightService()
+        insight = await session_insight_service.create_unpaired_insight_from_transcript(
+            client_user_id=current_user_id,
+            transcript_content=transcript_content,
+            session_date=session_date,
+            session_title=session_title
+        )
+        
+        # Convert to response format
+        response = _convert_to_response(insight)
+        logger.info(f"✅ Successfully created unpaired session insight: {insight.id}")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error creating unpaired session insight from file: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to process transcript file"
+        )
+
+
+@router.get("/my-insights", response_model=List[SessionInsightResponse])
+async def get_my_insights(
+    include_unpaired: bool = True,
+    include_paired: bool = True,
+    limit: int = 20,
+    offset: int = 0,
+    current_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """
+    Get all insights for the current user (both paired and unpaired).
+    """
+    try:
+        logger.info(f"=== get_my_insights called ===")
+        logger.info(f"user: {current_user_id}")
+        
+        session_insight_service = SessionInsightService()
+        insights = await session_insight_service.get_user_insights(
+            user_id=current_user_id,
+            include_unpaired=include_unpaired,
+            include_paired=include_paired,
+            limit=limit,
+            offset=offset
+        )
+        
+        # Convert to response format
+        responses = [_convert_to_response(insight) for insight in insights]
+        logger.info(f"✅ Successfully retrieved {len(insights)} insights")
+        return responses
+        
+    except Exception as e:
+        logger.error(f"❌ Error getting user insights: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve insights"
+        )
+
+
+@router.post("/{insight_id}/share", response_model=dict)
+async def share_insight_with_coach(
+    insight_id: str,
+    request: ShareInsightRequest,
+    current_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """
+    Share an unpaired insight with a coach.
+    """
+    try:
+        logger.info(f"=== share_insight_with_coach called ===")
+        logger.info(f"insight: {insight_id}, user: {current_user_id}, coach: {request.coach_user_id}")
+        
+        session_insight_service = SessionInsightService()
+        success = await session_insight_service.share_insight_with_coach(
+            insight_id=insight_id,
+            client_user_id=current_user_id,
+            coach_user_id=request.coach_user_id,
+            permissions=request.permissions
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Insight not found or cannot be shared"
+            )
+        
+        logger.info(f"✅ Successfully shared insight with coach")
+        return {"message": "Insight shared successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error sharing insight: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to share insight"
+        )
+
+
+@router.delete("/{insight_id}/share/{coach_user_id}")
+async def unshare_insight_with_coach(
+    insight_id: str,
+    coach_user_id: str,
+    current_user_id: str = Depends(get_current_user_clerk_id)
+):
+    """
+    Remove sharing access for a coach from an unpaired insight.
+    """
+    try:
+        logger.info(f"=== unshare_insight_with_coach called ===")
+        logger.info(f"insight: {insight_id}, user: {current_user_id}, coach: {coach_user_id}")
+        
+        session_insight_service = SessionInsightService()
+        success = await session_insight_service.unshare_insight_with_coach(
+            insight_id=insight_id,
+            client_user_id=current_user_id,
+            coach_user_id=coach_user_id
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Insight not found or cannot be unshared"
+            )
+        
+        logger.info(f"✅ Successfully unshared insight with coach")
+        return {"message": "Insight unshared successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error unsharing insight: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to unshare insight"
         )
 
 
