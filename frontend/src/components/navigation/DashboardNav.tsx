@@ -34,7 +34,7 @@ export default function DashboardNav() {
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 bg-gray-900/80" />
+            <div className="fixed inset-0 bg-background/80" />
           </Transition.Child>
 
           <div className="fixed inset-0 flex">
@@ -164,7 +164,7 @@ function NavigationContent({ navigation, pathname, userRole }: NavigationContent
             <div className="flex items-center gap-2">
               <div className={cn(
                 "w-2 h-2 rounded-full",
-                userRole === 'coach' ? 'bg-blue-500' : 'bg-green-500'
+                userRole === 'coach' ? 'bg-primary' : 'bg-secondary'
               )} />
               <span className="text-sm font-medium capitalize">{userRole}</span>
             </div>

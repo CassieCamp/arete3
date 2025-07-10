@@ -10,12 +10,6 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Arete Brand Colors
-        'midnight-indigo': '#1B1E3C',
-        'metis-gold': '#D6B370',
-        'cloud-grey': '#C5C7CD',
-        'owlet-teal': '#4D787E',
-        'moonlight-ivory': '#F8F7F2',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {

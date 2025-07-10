@@ -61,20 +61,20 @@ export default function ClientInvitationPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-3xl font-extrabold text-foreground">
             Client Invitation
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             Enter your coach's email address to verify your invitation
           </p>
         </div>
         
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4">
-            <p className="text-sm text-red-600">{error}</p>
+          <div className="bg-destructive/10 border border-destructive/20 rounded-md p-4">
+            <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
         
@@ -95,7 +95,7 @@ export default function ClientInvitationPage() {
           
           <Button
             type="submit"
-            className="w-full bg-[#1B1E3C] hover:bg-[#1B1E3C]/90 !text-white"
+            className="w-full bg-primary hover:bg-primary/90 !text-primary-foreground"
             size="lg"
             disabled={isLoading}
           >
@@ -108,14 +108,14 @@ export default function ClientInvitationPage() {
             variant="ghost"
             onClick={() => router.back()}
             disabled={isLoading}
-            className="text-sm text-gray-500 hover:text-gray-700"
+            className="text-sm text-muted-foreground hover:text-foreground"
           >
             ← Back
           </Button>
         </div>
         
         <div className="text-center">
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-muted-foreground">
             Only clients invited by authorized coaches can create accounts.
             If you're having trouble, please contact your coach.
           </p>

@@ -188,10 +188,10 @@ export default function ConnectionsPage() {
   // Show loading while authentication is being determined
   if (isAuthenticated === undefined) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -200,10 +200,10 @@ export default function ConnectionsPage() {
   // Show loading while user data is being loaded
   if (isAuthenticated && !user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading user data...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading user data...</p>
         </div>
       </div>
     );
@@ -212,10 +212,10 @@ export default function ConnectionsPage() {
   // If not authenticated, the useEffect will handle redirect
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Redirecting...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Redirecting...</p>
         </div>
       </div>
     );
@@ -279,24 +279,24 @@ export default function ConnectionsPage() {
             </CardHeader>
             <CardContent>
               {loading && (incomingPendingRequests.length === 0 && outgoingPendingRequests.length === 0) ? (
-                <p className="text-gray-500">Loading...</p>
+                <p className="text-muted-foreground">Loading...</p>
               ) : (incomingPendingRequests.length === 0 && outgoingPendingRequests.length === 0) ? (
-                <p className="text-gray-500">No pending requests</p>
+                <p className="text-muted-foreground">No pending requests</p>
               ) : (
                 <div className="space-y-4">
                   {/* Show incoming requests (where user can accept/decline) */}
                   {incomingPendingRequests.map((relationship) => (
                     <div
                       key={relationship.id}
-                      className="p-4 border border-gray-200 rounded-lg bg-blue-50"
+                      className="p-4 border border-border rounded-lg bg-primary/5"
                     >
                       <div className="flex justify-between items-start mb-3">
                         <div>
                           <p className="font-medium">{getOtherUserEmail(relationship)}</p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-muted-foreground">
                             Role: {getRelationshipRole(relationship)}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             Invitation received: {new Date(relationship.created_at).toLocaleDateString()}
                           </p>
                         </div>
@@ -325,20 +325,20 @@ export default function ConnectionsPage() {
                   {outgoingPendingRequests.map((relationship) => (
                     <div
                       key={relationship.id}
-                      className="p-4 border border-gray-200 rounded-lg bg-yellow-50"
+                      className="p-4 border border-border rounded-lg bg-accent/10"
                     >
                       <div className="flex justify-between items-start mb-3">
                         <div>
                           <p className="font-medium">{getOtherUserEmail(relationship)}</p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-muted-foreground">
                             Role: {getRelationshipRole(relationship)}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             Invitation sent: {new Date(relationship.created_at).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-500">Waiting for client response...</p>
+                      <p className="text-sm text-muted-foreground">Waiting for client response...</p>
                     </div>
                   ))}
                 </div>
@@ -356,27 +356,27 @@ export default function ConnectionsPage() {
             </CardHeader>
             <CardContent>
               {loading && relationships.active.length === 0 ? (
-                <p className="text-gray-500">Loading...</p>
+                <p className="text-muted-foreground">Loading...</p>
               ) : relationships.active.length === 0 ? (
-                <p className="text-gray-500">No active connections</p>
+                <p className="text-muted-foreground">No active connections</p>
               ) : (
                 <div className="space-y-4">
                   {relationships.active.map((relationship) => (
                     <div
                       key={relationship.id}
-                      className="p-4 border border-gray-200 rounded-lg bg-green-50"
+                      className="p-4 border border-border rounded-lg bg-secondary/10"
                     >
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-medium">{getOtherUserEmail(relationship)}</p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-muted-foreground">
                             Role: {getRelationshipRole(relationship)}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             Connected: {new Date(relationship.updated_at).toLocaleDateString()}
                           </p>
                         </div>
-                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                        <span className="px-2 py-1 bg-secondary/20 text-secondary text-xs rounded-full">
                           Active
                         </span>
                       </div>

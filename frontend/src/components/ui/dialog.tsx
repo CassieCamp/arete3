@@ -96,7 +96,7 @@ interface DialogDescriptionProps {
 
 const DialogDescription = ({ children, className }: DialogDescriptionProps) => {
   return (
-    <p className={cn("text-sm text-gray-600", className)}>
+    <p className={cn("text-sm text-muted-foreground", className)}>
       {children}
     </p>
   )
