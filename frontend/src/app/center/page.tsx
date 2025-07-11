@@ -13,9 +13,9 @@ import {
   MapPin,
   User,
   FileText,
-  Settings,
-  Tent
+  Settings
 } from "lucide-react";
+import { CaveIcon } from "@/components/icons/CaveIcon";
 
 export default function CenterPage() {
   const centerCards = [
@@ -75,7 +75,7 @@ export default function CenterPage() {
       <ThreeIconNav />
       <div className="container mx-auto px-4 py-8 md:pt-20 pb-20">
         <PageHeader
-          icon={Tent}
+          icon={CaveIcon as any}
           title="Center"
           subtitle=""
         />

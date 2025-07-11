@@ -4,7 +4,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useUser, UserButton } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Route, Tent, Users } from 'lucide-react';
+import { Route, Users } from 'lucide-react';
+import { CaveIcon } from '@/components/icons/CaveIcon';
 import { AuthDropdown } from '@/components/auth/AuthDropdown';
 
 interface ThreeIconNavProps {
@@ -21,7 +22,7 @@ const NAV_ITEMS = [
   },
   {
     id: 'center',
-    icon: Tent,
+    icon: CaveIcon as any,
     label: 'Center',
     href: '/center'
   },
