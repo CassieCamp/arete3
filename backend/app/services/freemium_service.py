@@ -235,7 +235,7 @@ class FreemiumService:
         """
         try:
             # Get all relationships where user is a client
-            relationships = await self.coaching_relationships_repository.get_relationships_for_client(user_id)
+            relationships = await self.coaching_relationships_repository.get_active_relationships_for_user(user_id)
             
             # Check if any are active
             for relationship in relationships:

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useEntryService, Entry } from '@/services/entryService';
+import { useAuth } from '@/context/AuthContext';
 
 interface EntryGroup {
   month: string;
@@ -16,6 +17,7 @@ interface EntryGroup {
 export function JourneyTab() {
   const router = useRouter();
   const entryService = useEntryService();
+  const { isAuthenticated, user } = useAuth();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -24,8 +26,10 @@ export function JourneyTab() {
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
-    fetchEntries(0, true);
-  }, []);
+    if (isAuthenticated && user) {
+      fetchEntries(0, true);
+    }
+  }, [isAuthenticated, user]);
 
   const fetchEntries = async (currentOffset: number, isInitial = false) => {
     try {
@@ -115,117 +119,111 @@ export function JourneyTab() {
         <div className="text-6xl mb-4">🗺️</div>
         <h3 className="text-xl font-semibold text-gray-900 mb-2">Your Journey Starts Here</h3>
         <p className="text-gray-600 mb-6">
-          Add your first entry to begin tracking your progress over time.
+          Add your first entry to begin your journey.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="relative">
-        {/* Timeline Line */}
-        <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200"></div>
-        
-        <div className="space-y-8">
-          {groupedEntries.map((group, groupIndex) => (
-            <div key={groupIndex}>
-              {/* Month Header */}
-              <div className="relative flex items-center mb-6">
-                <div className="absolute left-6 w-4 h-4 bg-primary rounded-full border-4 border-white shadow-lg"></div>
-                <div className="ml-16">
-                  <h3 className="text-lg font-semibold text-gray-800">{group.month}</h3>
+    <div className="w-full">
+      {/* Timeline Content */}
+      <div className="w-full">
+        <div className="pt-2">
+          <div className="space-y-6">
+            {groupedEntries.map((group, groupIndex) => (
+              <div key={groupIndex}>
+                {/* Entries for this month - removed month header */}
+                <div className="space-y-4">
+                  {group.entries.map((entry) => (
+                    <div key={entry.id}>
+                      <div>
+                        <Card
+                          className="hover:shadow-md transition-shadow md:min-h-auto sm:min-h-[120px] cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleCardClick(entry)}
+                        >
+                          <CardHeader className="pb-3 md:pb-3 sm:pb-2">
+                            {/* Desktop Layout */}
+                            <div className="hidden md:flex items-center justify-between">
+                              <CardTitle className="text-lg">{entry.title}</CardTitle>
+                              <div className="flex items-center gap-2">
+                                <Badge className={getTypeColor(entry.entry_type)}>
+                                  {getTypeLabel(entry.entry_type)}
+                                </Badge>
+                                <span className="text-sm text-gray-500">
+                                  {format(new Date(entry.created_at), 'MMM d, yyyy')}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {/* Mobile Layout */}
+                            <div className="md:hidden">
+                              <CardTitle className="text-lg w-full mb-2">{entry.title}</CardTitle>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge className={`${getTypeColor(entry.entry_type)} text-xs`}>
+                                  {getTypeLabel(entry.entry_type)}
+                                </Badge>
+                                <span className="text-xs text-gray-500">
+                                  {format(new Date(entry.created_at), 'MMM d, yyyy')}
+                                </span>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="md:block hidden">
+                            {entry.content && (
+                              <p className="text-gray-700 mb-4 line-clamp-3">{entry.content}</p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-              
-              {/* Entries for this month */}
-              <div className="space-y-4">
-                {group.entries.map((entry) => (
-                  <div key={entry.id} className="relative">
-                    <div className="absolute left-7 w-2 h-2 bg-gray-400 rounded-full"></div>
-                    <div className="ml-16">
-                      <Card
-                        className="hover:shadow-md transition-shadow md:min-h-auto sm:min-h-[120px] cursor-pointer hover:bg-gray-50"
-                        onClick={() => handleCardClick(entry)}
-                      >
-                        <CardHeader className="pb-3 md:pb-3 sm:pb-2">
-                          {/* Desktop Layout */}
-                          <div className="hidden md:flex items-center justify-between">
-                            <CardTitle className="text-lg">{entry.title}</CardTitle>
-                            <div className="flex items-center gap-2">
-                              <Badge className={getTypeColor(entry.entry_type)}>
-                                {getTypeLabel(entry.entry_type)}
-                              </Badge>
-                              <span className="text-sm text-gray-500">
-                                {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          {/* Mobile Layout */}
-                          <div className="md:hidden">
-                            <CardTitle className="text-lg w-full mb-2">{entry.title}</CardTitle>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge className={`${getTypeColor(entry.entry_type)} text-xs`}>
-                                {getTypeLabel(entry.entry_type)}
-                              </Badge>
-                              {entry.has_insights && (
-                                <Badge variant="outline" className="text-xs">
-                                  ✨ Insights
-                                </Badge>
-                              )}
-                              <span className="text-xs text-gray-500">
-                                {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}
-                              </span>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="md:block hidden">
-                          {entry.content && (
-                            <p className="text-gray-700 mb-4 line-clamp-3">{entry.content}</p>
-                          )}
-                          
-                          {entry.has_insights && (
-                            <div className="mt-4">
-                              <Badge variant="outline" className="text-xs">
-                                ✨ Has Insights
-                              </Badge>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        {/* Load More Button */}
-        {hasMore && (
-          <div className="text-center mt-8">
-            <button
-              onClick={loadMore}
-              disabled={loadingMore}
-              className="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 disabled:opacity-50 transition-colors"
-            >
-              {loadingMore ? 'Loading...' : 'Load More'}
-            </button>
+            ))}
           </div>
-        )}
+          
+          {/* Load More Button */}
+          {hasMore && (
+            <div className="text-center mt-8">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 disabled:opacity-50 transition-colors"
+              >
+                {loadingMore ? 'Loading...' : 'Load More'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Floating Add Button */}
-      <div className="fixed bottom-6 right-6 z-10">
+      {/* Fixed Add Button - positioned above bottom navigation */}
+      <div className="fixed bottom-20 right-6 z-10">
         <Button
           onClick={() => router.push('/documents/upload')}
-          className="rounded-full w-14 h-14 shadow-lg hover:shadow-xl transition-all bg-primary text-primary-foreground"
+          className="rounded-full w-14 h-14 shadow-lg hover:shadow-xl transition-all bg-primary text-primary-foreground subtle-pulse"
           aria-label="Add new entry"
         >
           <span className="text-2xl">+</span>
         </Button>
       </div>
+      
+      {/* Global CSS for subtle pulse effect */}
+      <style jsx global>{`
+        @keyframes subtle-glow {
+          0%, 100% {
+            box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.1), 0 0 8px 2px rgba(248, 250, 252, 0.1);
+          }
+          50% {
+            box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.1), 0 0 12px 4px rgba(248, 250, 252, 0.2);
+          }
+        }
+        
+        .subtle-pulse {
+          animation: subtle-glow 4s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }
