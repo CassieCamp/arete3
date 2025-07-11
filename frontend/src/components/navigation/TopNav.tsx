@@ -21,7 +21,8 @@ export function TopNav({
   className = ""
 }: TopNavProps) {
   const {
-    mainNavigation
+    mainNavigation,
+    isLoading
   } = useNavigation();
   const router = useRouter();
   const { user } = useUser();
@@ -57,6 +58,44 @@ export function TopNav({
     }
     return item;
   });
+
+  // Don't render navigation items while loading
+  if (isLoading) {
+    return (
+      <nav className={cn(
+        "bg-background/95 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50",
+        className
+      )}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Left side - Logo/Brand area */}
+            <div className="flex items-center">
+              <Link href="/">
+                <h1 className="text-2xl font-serif font-bold text-gray-900 dark:text-white cursor-pointer hover:opacity-80 transition-opacity">
+                  Arete
+                </h1>
+              </Link>
+            </div>
+
+            {/* Right side - Authentication */}
+            <div className="flex items-center gap-4">
+              {user ? (
+                <UserButton
+                  appearance={{
+                    elements: {
+                      avatarBox: "w-8 h-8"
+                    }
+                  }}
+                />
+              ) : (
+                <AuthDropdown variant="ghost" />
+              )}
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className={cn(

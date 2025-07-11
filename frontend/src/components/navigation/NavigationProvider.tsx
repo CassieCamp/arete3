@@ -26,17 +26,24 @@ interface NavigationProviderProps {
 }
 
 export function NavigationProvider({ children }: NavigationProviderProps) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, roleLoaded } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [menuNavigation, setMenuNavigation] = useState<MenuNavigationItem[]>([]);
+  const [mainNavigation, setMainNavigation] = useState<MainNavigationItem[]>([]);
   const [userRole, setUserRole] = useState<'coach' | 'client' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && roleLoaded) {
       // Determine user role from user object or profile
       const role = user.role as 'coach' | 'client' || 'client'; // Default to client
       setUserRole(role);
+      
+      // Filter main navigation items based on role using the roles property
+      const filteredMainNavigation = MAIN_NAVIGATION.filter(item => {
+        return item.roles.includes(role);
+      });
+      setMainNavigation(filteredMainNavigation);
       
       // Get menu navigation items for the user's role
       const roleMenuNavigation = getMenuNavigationForRole(role);
@@ -45,11 +52,14 @@ export function NavigationProvider({ children }: NavigationProviderProps) {
     } else if (isAuthenticated === false) {
       // User is not authenticated
       setIsLoading(false);
+    } else if (!roleLoaded) {
+      // Still loading role
+      setIsLoading(true);
     }
-  }, [user, isAuthenticated]);
+  }, [user, isAuthenticated, roleLoaded]);
 
   const value: NavigationContextType = {
-    mainNavigation: MAIN_NAVIGATION,
+    mainNavigation,
     menuNavigation,
     isMobileMenuOpen,
     setIsMobileMenuOpen,

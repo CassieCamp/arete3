@@ -3,19 +3,22 @@ import {
   Route,
   Mic,
   User,
-  Settings
+  Settings,
+  BarChart3
 } from 'lucide-react';
 import { CaveIcon } from '@/components/icons/CaveIcon';
 import { CoachIcon } from '@/components/icons/CoachIcon';
+import { RippleIcon } from '@/components/icons/RippleIcon';
 
-// Main navigation items for the four-icon system
+// Main navigation items for the three-icon system
 export interface MainNavigationItem {
-  id: 'mountain' | 'microphone' | 'compass' | 'basecamp';
+  id: 'mountain' | 'microphone' | 'compass' | 'basecamp' | 'console' | 'clients';
   icon: LucideIcon;
   label: string;
   description: string;
   href?: string;
   action?: string;
+  roles: ('coach' | 'client')[];
 }
 
 // Menu items for the hamburger menu
@@ -30,25 +33,44 @@ export interface MenuNavigationItem {
 // Main navigation configuration
 export const MAIN_NAVIGATION: MainNavigationItem[] = [
   {
+    id: 'console',
+    icon: BarChart3,
+    label: 'Console',
+    description: 'Business management and analytics',
+    href: '/console',
+    roles: ['coach']
+  },
+  {
     id: 'mountain',
     icon: Route,
     label: 'Journey',
     description: 'Your timeline of growth and discovery',
-    href: '/journey'
+    href: '/journey',
+    roles: ['client']
+  },
+  {
+    id: 'clients',
+    icon: RippleIcon as any,
+    label: 'Clients',
+    description: 'Manage your coaching relationships',
+    href: '/clients',
+    roles: ['coach']
   },
   {
     id: 'basecamp',
     icon: CaveIcon as any,
     label: 'Center',
     description: 'Your foundation and starting point',
-    href: '/center'
+    href: '/center',
+    roles: ['client']
   },
   {
     id: 'compass',
     icon: CoachIcon as any,
-    label: 'Coach',
-    description: '',
-    href: '/coach'
+    label: 'Profile',
+    description: 'Your profile and settings',
+    href: '/coach',
+    roles: ['client', 'coach']
   }
 ];
 

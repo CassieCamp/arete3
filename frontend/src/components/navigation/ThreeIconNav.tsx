@@ -2,10 +2,13 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser, UserButton } from '@clerk/nextjs';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Route, Users } from 'lucide-react';
+import { Route, Users, BarChart3 } from 'lucide-react';
 import { CaveIcon } from '@/components/icons/CaveIcon';
+import { RippleIcon } from '@/components/icons/RippleIcon';
+import { CoachIcon } from '@/components/icons/CoachIcon';
 import { AuthDropdown } from '@/components/auth/AuthDropdown';
 
 interface ThreeIconNavProps {
@@ -13,31 +16,49 @@ interface ThreeIconNavProps {
 }
 
 // Navigation items specifically for the three-icon nav
-const NAV_ITEMS = [
+const ALL_NAV_ITEMS = [
+  {
+    id: 'console',
+    icon: BarChart3,
+    label: 'Console',
+    href: '/console',
+    roles: ['coach'] as ('client' | 'coach')[] // Only show for coaches
+  },
   {
     id: 'journey',
     icon: Route,
     label: 'Journey',
-    href: '/journey'
+    href: '/journey',
+    roles: ['client'] as ('client' | 'coach')[] // Only show for clients
   },
   {
     id: 'center',
     icon: CaveIcon as any,
     label: 'Center',
-    href: '/center'
+    href: '/center',
+    roles: ['client'] as ('client' | 'coach')[] // Only show for clients
   },
   {
-    id: 'coach',
-    icon: Users,
-    label: 'Coach',
-    href: '/coach'
+    id: 'clients',
+    icon: RippleIcon as any,
+    label: 'Clients',
+    href: '/clients',
+    roles: ['coach'] as ('client' | 'coach')[] // Only show for coaches
+  },
+  {
+    id: 'profile',
+    icon: CoachIcon as any,
+    label: 'Profile',
+    href: '/coach',
+    roles: ['client', 'coach'] as ('client' | 'coach')[] // Show for both
   }
-] as const;
+];
 
 export function ThreeIconNav({ className = "" }: ThreeIconNavProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useUser();
+  const { user: authUser, roleLoaded } = useAuth();
 
   const handleNavigation = (href: string) => {
     router.push(href);
@@ -46,6 +67,19 @@ export function ThreeIconNav({ className = "" }: ThreeIconNavProps) {
   const isActive = (href: string) => {
     return pathname === href || pathname.startsWith(href + '/');
   };
+
+  // Don't render anything until the role is loaded
+  if (!roleLoaded) {
+    return null;
+  }
+
+  // Filter navigation items based on user role
+  const NAV_ITEMS = ALL_NAV_ITEMS.filter(item => {
+    if (!authUser?.role) {
+      return false;
+    }
+    return item.roles.includes(authUser.role);
+  });
 
   return (
     <>

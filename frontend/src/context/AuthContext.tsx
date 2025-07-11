@@ -15,6 +15,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  roleLoaded: boolean;
   login: (user: User) => void;
   logout: () => void;
   getAuthToken: () => Promise<string | null>;
@@ -43,8 +44,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Fetch user role from backend when user is authenticated
   React.useEffect(() => {
     const fetchUserRole = async () => {
+      console.log('🐛 DEBUG - AuthContext fetchUserRole:', {
+        isSignedIn,
+        hasClerkUser: !!clerkUser,
+        roleLoaded,
+        currentUserRole: userRole,
+        timestamp: new Date().toISOString()
+      });
+      
       if (isSignedIn && clerkUser && !roleLoaded) {
         try {
+          console.log('🐛 DEBUG - Fetching user role from backend...');
           const token = await getToken();
           if (token) {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -57,12 +67,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             
             if (response.ok) {
               const userData = await response.json();
+              console.log('🐛 DEBUG - Successfully fetched user data:', userData);
               setUserRoleState(userData.role);
               setRoleLoaded(true);
+            } else {
+              console.log('🐛 DEBUG - Failed to fetch user data, response not ok:', response.status);
             }
+          } else {
+            console.log('🐛 DEBUG - No token available');
           }
         } catch (error) {
-          console.error('Failed to fetch user role:', error);
+          console.error('🐛 DEBUG - Failed to fetch user role:', error);
           setRoleLoaded(true); // Set to true even on error to prevent infinite loading
         }
       }
@@ -80,6 +95,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     role: userRole,
     clerkId: clerkUser.id
   } : null;
+
+  console.log('🐛 DEBUG - AuthContext user object:', {
+    user,
+    userRole,
+    roleLoaded,
+    timestamp: new Date().toISOString()
+  });
 
   const login = (userData: User) => {
     // This is handled by Clerk, but we can set additional data if needed
@@ -105,6 +127,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     user,
     isAuthenticated: isSignedIn || false,
+    roleLoaded,
     login,
     logout,
     getAuthToken,
