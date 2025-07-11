@@ -28,7 +28,7 @@ export default function PricingPage() {
     {
       id: "client-solo",
       name: "Client Growth Enhanced",
-      price: "$79/month",
+      price: "$39/month",
       popular: true,
       features: [
         "Unlimited AI session analysis",
