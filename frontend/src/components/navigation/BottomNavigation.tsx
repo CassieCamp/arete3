@@ -43,14 +43,14 @@ export function BottomNavigation({
                 variant="ghost"
                 size="lg"
                 onClick={() => handleNavigation(item)}
-                className={`p-3 rounded-full transition-all duration-200 flex flex-col items-center gap-1 ${
+                className={`p-3 rounded-full transition-all duration-200 flex flex-col items-center justify-center gap-1 min-h-[60px] ${
                   isActive
                     ? 'text-primary bg-primary/10 scale-110'
                     : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                 }`}
               >
-                <Icon className="w-6 h-6" />
-                <span className="text-xs font-medium">{item.label}</span>
+                <Icon className="w-6 h-6 flex-shrink-0" />
+                <span className="text-xs font-medium leading-none">{item.label}</span>
               </Button>
             </div>
           );

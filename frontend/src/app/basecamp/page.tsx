@@ -24,56 +24,49 @@ export default function BasecampPage() {
       title: "My Values",
       description: "Explore and define your core values",
       icon: Heart,
-      href: null, // Placeholder - no link yet
-      color: "text-red-500"
+      href: null // Placeholder - no link yet
     },
     {
       id: "energy",
       title: "My Energy",
       description: "Understand your energy patterns and sources",
       icon: Zap,
-      href: null, // Placeholder - no link yet
-      color: "text-yellow-500"
+      href: null // Placeholder - no link yet
     },
     {
       id: "personality",
       title: "My Personality",
       description: "Discover your personality traits and preferences",
       icon: Brain,
-      href: null, // Placeholder - no link yet
-      color: "text-purple-500"
+      href: null // Placeholder - no link yet
     },
     {
       id: "destinations",
       title: "My Destinations",
       description: "Set and track your goals and aspirations",
       icon: MapPin,
-      href: null, // Placeholder - no link yet
-      color: "text-blue-500"
+      href: null // Placeholder - no link yet
     },
     {
       id: "documents",
       title: "Documents",
       description: "Upload and manage your coaching documents",
       icon: FileText,
-      href: "/documents",
-      color: "text-orange-500"
+      href: "/documents"
     },
     {
       id: "profile",
       title: "Profile",
       description: "Manage your personal information and preferences",
       icon: User,
-      href: "/profile/edit",
-      color: "text-green-500"
+      href: "/profile/edit"
     },
     {
       id: "settings",
       title: "Settings",
       description: "Configure your account and application settings",
       icon: Settings,
-      href: "/settings",
-      color: "text-gray-500"
+      href: "/settings"
     }
   ];
 
@@ -84,7 +77,7 @@ export default function BasecampPage() {
         <PageHeader
           icon={Tent}
           title="Basecamp"
-          subtitle="Your personal foundation for growth and self-discovery"
+          subtitle=""
         />
         
         <div className="w-full max-w-4xl mx-auto">
@@ -95,8 +88,8 @@ export default function BasecampPage() {
               const cardContent = (
                 <Card className="h-full transition-all hover:shadow-md hover:scale-[1.02] cursor-pointer">
                   <CardHeader className="text-center">
-                    <div className="mx-auto mb-4 p-3 rounded-full bg-secondary/20 w-fit">
-                      <IconComponent className={`h-8 w-8 ${card.color}`} />
+                    <div className="mx-auto mb-4 p-3 rounded-full bg-primary w-fit">
+                      <IconComponent className="w-8 h-8 text-slate-100" />
                     </div>
                     <CardTitle className="text-xl">{card.title}</CardTitle>
                     <CardDescription className="text-center">
@@ -132,11 +125,15 @@ export default function BasecampPage() {
             })}
           </div>
 
+          {/* Ted Lasso Quote */}
           <div className="mt-12 text-center">
-            <p className="text-sm text-muted-foreground">
-              Build your foundation step by step. Each area helps you understand yourself better and guides your growth journey.
+            <p className="text-lg italic text-slate-600 max-w-2xl mx-auto">
+              "I think that's what coaching is all about: helping people become the best versions of themselves."
+              <br />
+              - Ted Lasso
             </p>
           </div>
+
         </div>
       </div>
     </AppLayout>

@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter, usePathname } from 'next/navigation';
+import { useUser, UserButton } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Route, Tent, Users } from 'lucide-react';
+import { AuthDropdown } from '@/components/auth/AuthDropdown';
 
 interface ThreeIconNavProps {
   className?: string;
@@ -34,6 +36,7 @@ const NAV_ITEMS = [
 export function ThreeIconNav({ className = "" }: ThreeIconNavProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { user } = useUser();
 
   const handleNavigation = (href: string) => {
     router.push(href);
@@ -84,9 +87,19 @@ export function ThreeIconNav({ className = "" }: ThreeIconNavProps) {
           })}
           </div>
           
-          {/* Right side - Empty space for balance */}
+          {/* Right side - User Avatar */}
           <div className="flex items-center">
-            {/* This space can be used for user avatar or other actions later */}
+            {user ? (
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "w-8 h-8"
+                  }
+                }}
+              />
+            ) : (
+              <AuthDropdown variant="ghost" />
+            )}
           </div>
         </div>
       </div>

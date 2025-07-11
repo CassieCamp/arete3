@@ -139,13 +139,13 @@ export function JourneyTab() {
                     <div key={entry.id}>
                       <div>
                         <Card
-                          className="hover:shadow-md transition-shadow md:min-h-auto sm:min-h-[120px] cursor-pointer hover:bg-gray-50"
+                          className="hover:shadow-md transition-shadow md:min-h-auto sm:min-h-[120px] cursor-pointer hover:bg-gray-50 md:max-w-4xl md:mx-auto"
                           onClick={() => handleCardClick(entry)}
                         >
                           <CardHeader className="pb-3 md:pb-3 sm:pb-2">
                             {/* Desktop Layout */}
-                            <div className="hidden md:flex items-center justify-between">
-                              <CardTitle className="text-lg">{entry.title}</CardTitle>
+                            <div className="hidden md:block">
+                              <CardTitle className="text-lg mb-2">{entry.title}</CardTitle>
                               <div className="flex items-center gap-2">
                                 <Badge className={getTypeColor(entry.entry_type)}>
                                   {getTypeLabel(entry.entry_type)}
