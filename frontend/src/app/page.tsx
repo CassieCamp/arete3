@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent } from '@/components/ui/card';
+import { AuthDropdown } from '@/components/auth/AuthDropdown';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -68,12 +69,7 @@ export default function HomePage() {
               </>
             ) : (
               <>
-                <Button
-                  variant="ghost"
-                  onClick={() => redirectToSignIn()}
-                >
-                  Sign In
-                </Button>
+                <AuthDropdown variant="ghost" />
                 <Button
                   onClick={() => router.push('/waitlist')}
                 >

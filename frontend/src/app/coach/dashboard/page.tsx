@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/ui/page-header';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { ThreeIconNav } from '@/components/navigation/ThreeIconNav';
 import { Users, Clock, FileText, Plus, Eye, MessageSquare, BookOpen, Settings } from 'lucide-react';
 import { ClientManagement } from '@/components/coach/ClientManagement';
@@ -166,7 +166,7 @@ export default function CoachDashboard() {
   const regularResources = resources.filter(r => !r.is_template);
 
   return (
-    <DashboardLayout>
+    <AppLayout>
       <ThreeIconNav />
       <div className="container mx-auto px-4 py-8 md:pt-20 pb-20">
         <PageHeader
@@ -276,6 +276,6 @@ export default function CoachDashboard() {
           </Tabs>
         </div>
       </div>
-    </DashboardLayout>
+    </AppLayout>
   );
 }

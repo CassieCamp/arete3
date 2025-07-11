@@ -3,12 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
+import { useUser, UserButton } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useNavigation } from './NavigationProvider';
 import { useEntryModal } from '@/context/EntryModalContext';
 import { MainNavigationItem } from '@/config/navigation';
+import { AuthDropdown } from '@/components/auth/AuthDropdown';
 
 interface TopNavProps {
   activeTab: 'mountain' | 'microphone' | 'compass' | 'basecamp' | null;
@@ -98,9 +99,19 @@ export function TopNav({
             })}
           </div>
 
-          {/* Right side - Empty space for balance */}
-          <div className="flex items-center">
-            {/* This space can be used for user avatar or other actions later */}
+          {/* Right side - Authentication */}
+          <div className="flex items-center gap-4">
+            {user ? (
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "w-8 h-8"
+                  }
+                }}
+              />
+            ) : (
+              <AuthDropdown variant="ghost" />
+            )}
           </div>
         </div>
       </div>

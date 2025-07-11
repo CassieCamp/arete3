@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { ThreeIconNav } from "@/components/navigation/ThreeIconNav";
 import {
   Heart,
@@ -78,7 +78,7 @@ export default function BasecampPage() {
   ];
 
   return (
-    <DashboardLayout>
+    <AppLayout>
       <ThreeIconNav />
       <div className="container mx-auto px-4 py-8 md:pt-20 pb-20">
         <PageHeader
@@ -139,6 +139,6 @@ export default function BasecampPage() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </AppLayout>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useEntryService, Entry } from '@/services/entryService';
 
@@ -213,6 +214,17 @@ export function JourneyTab() {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Floating Add Button */}
+      <div className="fixed bottom-6 right-6 z-10">
+        <Button
+          onClick={() => router.push('/documents/upload')}
+          className="rounded-full w-14 h-14 shadow-lg hover:shadow-xl transition-all bg-primary text-primary-foreground"
+          aria-label="Add new entry"
+        >
+          <span className="text-2xl">+</span>
+        </Button>
       </div>
     </div>
   );

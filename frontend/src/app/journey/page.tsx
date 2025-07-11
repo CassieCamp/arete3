@@ -1,14 +1,14 @@
 'use client';
 
 import { JourneyTab } from '@/components/mountain/JourneyTab';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { ThreeIconNav } from '@/components/navigation/ThreeIconNav';
 import { PageHeader } from '@/components/ui/page-header';
 import { Route } from 'lucide-react';
 
 export default function JourneyPage() {
   return (
-    <DashboardLayout>
+    <AppLayout>
       <ThreeIconNav />
       <div className="container mx-auto px-4 py-8 md:pt-20 pb-20">
         <PageHeader
@@ -21,6 +21,6 @@ export default function JourneyPage() {
           <JourneyTab />
         </div>
       </div>
-    </DashboardLayout>
+    </AppLayout>
   );
 }
