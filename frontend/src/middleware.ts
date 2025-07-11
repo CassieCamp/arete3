@@ -3,7 +3,20 @@ import { NextResponse } from "next/server";
 
 const isProtectedRoute = createRouteMatcher([
   '/dashboard(.*)',
-  '/profile(.*)'
+  '/profile(.*)',
+  '/documents(.*)',
+  '/goals(.*)',
+  '/insights(.*)',
+  '/journey(.*)',
+  '/mountain(.*)',
+  '/basecamp(.*)',
+  '/connections(.*)',
+  '/settings(.*)',
+  '/coach(.*)',
+  '/client-invitation(.*)',
+  '/dev-sync(.*)',
+  '/uat-dashboard(.*)',
+  '/test-basecamp(.*)'
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

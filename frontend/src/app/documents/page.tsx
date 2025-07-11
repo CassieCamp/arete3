@@ -186,8 +186,8 @@ export default function DocumentLibraryPage() {
                 </p>
               </div>
               <Button
-                onClick={() => router.push('/dashboard/documents/upload')}
-                className="bg-midnight-indigo hover:bg-owlet-teal"
+                onClick={() => router.push('/documents/upload')}
+                className="bg-primary hover:bg-primary/90"
               >
                 Upload New Document
               </Button>
@@ -221,8 +221,8 @@ export default function DocumentLibraryPage() {
                     Upload your first document to get started with AI-enhanced coaching insights.
                   </p>
                   <Button
-                    onClick={() => router.push('/dashboard/documents/upload')}
-                    className="bg-midnight-indigo hover:bg-owlet-teal"
+                    onClick={() => router.push('/documents/upload')}
+                    className="bg-primary hover:bg-primary/90"
                   >
                     Upload Your First Document
                   </Button>
@@ -304,7 +304,7 @@ export default function DocumentLibraryPage() {
                   <Button
                     onClick={() => setShowGenerator(true)}
                     variant="outline"
-                    className="text-midnight-indigo border-midnight-indigo hover:bg-moonlight-ivory"
+                    className="text-primary border-primary hover:bg-accent"
                   >
                     Generate New Baseline
                   </Button>

@@ -69,7 +69,7 @@ export default function DashboardNav() {
                   </div>
                 </Transition.Child>
                 
-                <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-card px-6 pb-2 ring-1 ring-white/10">
+                <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-sidebar px-6 pb-2 ring-1 ring-sidebar-border/10">
                   <div className="flex h-16 shrink-0 items-center">
                     <Link href="/" className="text-xl font-serif font-bold text-primary hover:text-primary/80 transition-colors">
                       Arete
@@ -85,7 +85,7 @@ export default function DashboardNav() {
 
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-card px-6 border-r border-border">
+        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-sidebar px-6 border-r border-sidebar-border">
           <div className="flex h-16 shrink-0 items-center justify-between">
             <Link href="/" className="text-xl font-serif font-bold text-primary hover:text-primary/80 transition-colors">
               Arete

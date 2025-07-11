@@ -8,7 +8,7 @@ motor
 clerk-backend-api
 sendgrid
 openai
-PyPDF2
+pypdf
 python-docx
 httpx
 # AI Services

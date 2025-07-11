@@ -1,22 +1,23 @@
 "use client";
 
-import { Waitlist } from "@clerk/nextjs";
+import { Waitlist, useClerk } from "@clerk/nextjs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function WaitlistPage() {
+  const { redirectToSignIn } = useClerk();
   return (
-    <div className="min-h-screen bg-moonlight-ivory">
+    <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="bg-white/80 backdrop-blur-sm border-b border-cloud-grey/20">
+      <nav className="bg-card/80 backdrop-blur-sm border-b border-border/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center space-x-2 text-midnight-indigo hover:text-owlet-teal">
+            <Link href="/" className="flex items-center space-x-2 text-foreground hover:text-muted-foreground">
               <ArrowLeft className="w-4 h-4" />
               <span>Back to Homepage</span>
             </Link>
-            <h1 className="text-xl font-medium text-midnight-indigo">
+            <h1 className="text-xl font-medium text-foreground">
               Join Our Waitlist
             </h1>
           </div>
@@ -25,17 +26,17 @@ export default function WaitlistPage() {
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
-          <h1 className="text-3xl md:text-4xl font-serif font-bold text-midnight-indigo mb-4">
+          <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4">
             Join the Future of Executive Coaching
           </h1>
         </div>
 
-        <Card className="border-cloud-grey/30 shadow-lg">
+        <Card className="border-border/30 shadow-lg">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-serif text-midnight-indigo">
+            <CardTitle className="text-2xl font-serif text-foreground">
               Join Our Waitlist
             </CardTitle>
-            <CardDescription className="text-owlet-teal">
+            <CardDescription className="text-muted-foreground">
               Be among the first to experience AI-enhanced executive coaching
             </CardDescription>
           </CardHeader>
@@ -45,24 +46,27 @@ export default function WaitlistPage() {
                 afterJoinWaitlistUrl="/waitlist/success"
                 appearance={{
                   elements: {
-                    formButtonPrimary: "bg-midnight-indigo hover:bg-midnight-indigo/90 text-white",
+                    formButtonPrimary: "bg-primary hover:bg-primary/90 text-primary-foreground",
                     card: "shadow-none border-0",
                     headerTitle: "hidden",
                     headerSubtitle: "hidden",
-                    socialButtonsBlockButton: "border-cloud-grey text-midnight-indigo hover:bg-midnight-indigo hover:text-white",
-                    formFieldInput: "border-cloud-grey focus:border-midnight-indigo",
-                    footerActionLink: "text-midnight-indigo hover:text-midnight-indigo/80"
+                    socialButtonsBlockButton: "border-border text-foreground hover:bg-accent",
+                    formFieldInput: "border-border focus:border-primary",
+                    footerActionLink: "text-primary hover:text-primary/80"
                   }
                 }}
               />
             </div>
             
-            <div className="mt-6 pt-6 border-t border-cloud-grey/30">
-              <p className="text-sm text-owlet-teal text-center">
+            <div className="mt-6 pt-6 border-t border-border/30">
+              <p className="text-sm text-muted-foreground text-center">
                 Already have an account?{' '}
-                <Link href="/sign-in" className="text-midnight-indigo hover:underline">
+                <button
+                  onClick={() => redirectToSignIn()}
+                  className="text-primary hover:underline cursor-pointer"
+                >
                   Sign in here
-                </Link>
+                </button>
               </p>
             </div>
           </CardContent>

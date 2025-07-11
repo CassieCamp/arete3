@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class SessionInsightRepository:
     def __init__(self):
-        self.collection_name = "session_insights"
+        self.collection_name = "entries"  # Updated to use new collection name
 
     async def create_insight(self, insight: SessionInsight) -> SessionInsight:
         """Create a new session insight"""

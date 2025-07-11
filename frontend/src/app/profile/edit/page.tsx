@@ -53,7 +53,7 @@ export default function ProfileEditPage() {
             <div className="flex gap-4">
               <Button
                 variant="outline"
-                onClick={() => router.push("/dashboard/connections")}
+                onClick={() => router.push("/connections")}
                 className="flex-1"
               >
                 Back to Dashboard

@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class GoalSuggestion:
-    """Represents an AI-generated goal suggestion"""
+    """Represents an AI-generated goal suggestion (backward compatibility)"""
     def __init__(self, goal_statement: str, success_vision: str, source_documents: List[str] = None):
         self.goal_statement = goal_statement
         self.success_vision = success_vision
@@ -16,49 +16,42 @@ class GoalSuggestion:
 
 
 class GoalService:
+    """
+    Backward compatibility wrapper that delegates to DestinationService.
+    This service no longer imports DestinationService directly to avoid circular dependencies.
+    Instead, it imports DestinationService dynamically when needed.
+    """
     def __init__(self, goal_repository: Optional[GoalRepository] = None):
-        """Initialize GoalService with a GoalRepository instance"""
+        """Initialize GoalService with backward compatibility"""
+        logger.info("GoalService initialized with backward compatibility to DestinationService")
         self.goal_repository = goal_repository or GoalRepository()
 
+    def _get_destination_service(self):
+        """Get DestinationService instance dynamically to avoid circular imports"""
+        from app.services.destination_service import DestinationService
+        return DestinationService()
+
     async def create_goal(self, user_id: str, goal_data: dict) -> Goal:
-        """Create a new goal for a user using human-centered approach"""
-        logger.info(f"=== GoalService.create_goal called ===")
-        logger.info(f"Creating goal for user_id: {user_id} with data: {goal_data}")
+        """Create a new goal for a user (backward compatibility wrapper)"""
+        logger.info(f"=== GoalService.create_goal called (backward compatibility) ===")
+        logger.info(f"Delegating to DestinationService for user_id: {user_id}")
         
         try:
-            # Validate required fields for new structure
-            if not goal_data.get("goal_statement"):
-                raise ValueError("Goal statement is required")
-            if not goal_data.get("success_vision"):
-                raise ValueError("Success vision is required")
+            destination_service = self._get_destination_service()
             
-            # Create Goal instance with human-centered structure
-            goal = Goal(
-                user_id=user_id,
-                goal_statement=goal_data["goal_statement"],
-                success_vision=goal_data["success_vision"],
-                progress_emoji=goal_data.get("progress_emoji", "😐"),
-                progress_notes=goal_data.get("progress_notes"),
-                ai_suggested=goal_data.get("ai_suggested", False),
-                source_documents=goal_data.get("source_documents", []),
-                status=goal_data.get("status", "active"),
-                tags=goal_data.get("tags", [])
-            )
+            # Convert goal_statement to destination_statement for new service
+            destination_data = goal_data.copy()
+            if "goal_statement" in destination_data:
+                destination_data["destination_statement"] = destination_data.pop("goal_statement")
             
-            # Add initial progress entry
-            initial_progress = ProgressEntry(
-                emoji=goal.progress_emoji,
-                notes=goal.progress_notes
-            )
-            goal.progress_history = [initial_progress]
+            # Create destination using new service
+            destination = await destination_service.create_destination(user_id, destination_data)
             
-            created_goal = await self.goal_repository.create_goal(goal)
-            logger.info(f"✅ Successfully created goal with ID: {created_goal.id}")
+            # Convert destination back to goal format for backward compatibility
+            goal = destination_service._destination_to_goal(destination)
             
-            # Send notification about new goal
-            await self._send_goal_notification(created_goal, "created")
-            
-            return created_goal
+            logger.info(f"✅ Successfully created goal via DestinationService with ID: {goal.id}")
+            return goal
             
         except Exception as e:
             logger.error(f"❌ Error creating goal: {e}")
@@ -69,15 +62,12 @@ class GoalService:
         logger.info(f"=== GoalService.create_goal_from_suggestion called ===")
         logger.info(f"Creating goal from suggestion for user_id: {user_id}")
         
-        goal_data = {
-            "goal_statement": suggestion.goal_statement,
-            "success_vision": suggestion.success_vision,
-            "ai_suggested": True,
-            "source_documents": suggestion.source_documents,
-            "progress_emoji": "😐"  # Neutral starting point
-        }
-        
-        return await self.create_goal(user_id, goal_data)
+        try:
+            destination_service = self._get_destination_service()
+            return await destination_service.create_goal_from_suggestion(user_id, suggestion)
+        except Exception as e:
+            logger.error(f"❌ Error creating goal from suggestion: {e}")
+            raise
 
     async def get_goal(self, goal_id: str, user_id: str) -> Optional[Goal]:
         """Retrieve a specific goal, ensuring the user has permission to view it"""
@@ -85,22 +75,8 @@ class GoalService:
         logger.info(f"Getting goal_id: {goal_id} for user_id: {user_id}")
         
         try:
-            goal = await self.goal_repository.get_goal_by_id(goal_id)
-            
-            if not goal:
-                logger.info(f"Goal {goal_id} not found")
-                return None
-            
-            # Check if user has permission to view this goal
-            if goal.user_id != user_id:
-                logger.warning(f"User {user_id} attempted to access goal {goal_id} owned by {goal.user_id}")
-                raise PermissionError(f"User does not have permission to access this goal")
-            
-            logger.info(f"✅ Successfully retrieved goal {goal_id}")
-            return goal
-            
-        except PermissionError:
-            raise
+            destination_service = self._get_destination_service()
+            return await destination_service.get_goal_wrapper(goal_id, user_id)
         except Exception as e:
             logger.error(f"❌ Error getting goal: {e}")
             raise
@@ -111,10 +87,8 @@ class GoalService:
         logger.info(f"Getting all goals for user_id: {user_id}")
         
         try:
-            goals = await self.goal_repository.get_goals_by_user_id(user_id)
-            logger.info(f"✅ Successfully retrieved {len(goals)} goals for user {user_id}")
-            return goals
-            
+            destination_service = self._get_destination_service()
+            return await destination_service.get_all_user_goals_wrapper(user_id)
         except Exception as e:
             logger.error(f"❌ Error getting user goals: {e}")
             raise
@@ -125,52 +99,8 @@ class GoalService:
         logger.info(f"Updating goal_id: {goal_id} for user_id: {user_id} with data: {update_data}")
         
         try:
-            # First check if goal exists and user has permission
-            existing_goal = await self.get_goal(goal_id, user_id)
-            if not existing_goal:
-                logger.info(f"Goal {goal_id} not found or user {user_id} has no permission")
-                return None
-            
-            # Validate update data - allow human-centered fields
-            allowed_fields = {
-                "goal_statement", "success_vision", "progress_emoji", "progress_notes",
-                "status", "tags", "source_documents",
-                # Legacy fields for backward compatibility
-                "title", "description", "priority", "target_date",
-                "completion_date", "progress_percentage", "notes"
-            }
-            
-            validated_update_data = {}
-            for key, value in update_data.items():
-                if key in allowed_fields:
-                    validated_update_data[key] = value
-                else:
-                    logger.warning(f"Ignoring invalid update field: {key}")
-            
-            if not validated_update_data:
-                logger.info("No valid fields to update")
-                return existing_goal
-            
-            # Add updated timestamp
-            validated_update_data["updated_at"] = datetime.utcnow()
-            
-            updated_goal = await self.goal_repository.update_goal(goal_id, validated_update_data)
-            
-            if updated_goal:
-                logger.info(f"✅ Successfully updated goal {goal_id}")
-                
-                # Send notification if status changed to completed
-                if validated_update_data.get("status") == "completed":
-                    await self._send_goal_notification(updated_goal, "completed")
-                elif "progress_emoji" in validated_update_data or "progress_notes" in validated_update_data:
-                    await self._send_goal_notification(updated_goal, "progress_updated")
-            else:
-                logger.warning(f"Goal {goal_id} was not updated")
-            
-            return updated_goal
-            
-        except PermissionError:
-            raise
+            destination_service = self._get_destination_service()
+            return await destination_service.update_goal_wrapper(goal_id, user_id, update_data)
         except Exception as e:
             logger.error(f"❌ Error updating goal: {e}")
             raise
@@ -181,41 +111,8 @@ class GoalService:
         logger.info(f"Updating progress for goal_id: {goal_id}, user_id: {user_id}, emoji: {emoji}")
         
         try:
-            # Get existing goal
-            existing_goal = await self.get_goal(goal_id, user_id)
-            if not existing_goal:
-                logger.info(f"Goal {goal_id} not found or user {user_id} has no permission")
-                return None
-            
-            # Create new progress entry
-            progress_entry = ProgressEntry(emoji=emoji, notes=notes)
-            
-            # Update goal with new progress
-            update_data = {
-                "progress_emoji": emoji,
-                "progress_notes": notes,
-                "updated_at": datetime.utcnow()
-            }
-            
-            # Add to progress history
-            progress_history = existing_goal.progress_history or []
-            progress_history.append(progress_entry)
-            update_data["progress_history"] = [entry.dict() for entry in progress_history]
-            
-            updated_goal = await self.goal_repository.update_goal(goal_id, update_data)
-            
-            if updated_goal:
-                logger.info(f"✅ Successfully updated progress for goal {goal_id}")
-                
-                # Send notification about progress update
-                await self._send_goal_notification(updated_goal, "progress_updated")
-            else:
-                logger.warning(f"Progress update failed for goal {goal_id}")
-            
-            return updated_goal
-            
-        except PermissionError:
-            raise
+            destination_service = self._get_destination_service()
+            return await destination_service.update_progress_emotion_wrapper(goal_id, user_id, emoji, notes)
         except Exception as e:
             logger.error(f"❌ Error updating progress emotion: {e}")
             raise
@@ -226,17 +123,8 @@ class GoalService:
         logger.info(f"Getting progress timeline for goal_id: {goal_id}, user_id: {user_id}")
         
         try:
-            goal = await self.get_goal(goal_id, user_id)
-            if not goal:
-                logger.info(f"Goal {goal_id} not found or user {user_id} has no permission")
-                return []
-            
-            progress_timeline = goal.progress_history or []
-            logger.info(f"✅ Retrieved {len(progress_timeline)} progress entries for goal {goal_id}")
-            return progress_timeline
-            
-        except PermissionError:
-            raise
+            destination_service = self._get_destination_service()
+            return await destination_service.get_progress_timeline_wrapper(goal_id, user_id)
         except Exception as e:
             logger.error(f"❌ Error getting progress timeline: {e}")
             raise
@@ -247,31 +135,8 @@ class GoalService:
         logger.info(f"Generating goal suggestions for user_id: {user_id} from {len(document_ids)} documents")
         
         try:
-            # TODO: Implement AI analysis of documents to generate goal suggestions
-            # This is a placeholder implementation
-            
-            # For now, return some example suggestions
-            suggestions = [
-                GoalSuggestion(
-                    goal_statement="Improve communication with my team",
-                    success_vision="My team feels heard, we have fewer misunderstandings, and people seem more engaged when I speak",
-                    source_documents=document_ids
-                ),
-                GoalSuggestion(
-                    goal_statement="Develop better work-life balance",
-                    success_vision="I feel more energized at work and more present at home, with clear boundaries between the two",
-                    source_documents=document_ids
-                ),
-                GoalSuggestion(
-                    goal_statement="Build confidence in decision-making",
-                    success_vision="I trust my instincts more, make decisions without excessive second-guessing, and feel proud of my choices",
-                    source_documents=document_ids
-                )
-            ]
-            
-            logger.info(f"✅ Generated {len(suggestions)} goal suggestions for user {user_id}")
-            return suggestions
-            
+            destination_service = self._get_destination_service()
+            return await destination_service.suggest_goals_from_documents(user_id, document_ids)
         except Exception as e:
             logger.error(f"❌ Error generating goal suggestions: {e}")
             raise
@@ -282,19 +147,8 @@ class GoalService:
         logger.info(f"Enhancing success vision for goal: {goal_statement}")
         
         try:
-            # TODO: Implement AI-powered success vision enhancement
-            # This is a placeholder implementation
-            
-            suggestions = [
-                "I feel more confident and comfortable in situations related to this goal",
-                "Others notice positive changes in how I approach this area",
-                "I experience less stress and more satisfaction when dealing with this topic",
-                "I can see clear progress in small, daily interactions and decisions"
-            ]
-            
-            logger.info(f"✅ Generated {len(suggestions)} success vision suggestions")
-            return suggestions
-            
+            destination_service = self._get_destination_service()
+            return await destination_service.enhance_success_vision(goal_statement, user_context)
         except Exception as e:
             logger.error(f"❌ Error enhancing success vision: {e}")
             raise
@@ -305,23 +159,8 @@ class GoalService:
         logger.info(f"Deleting goal_id: {goal_id} for user_id: {user_id}")
         
         try:
-            # First check if goal exists and user has permission
-            existing_goal = await self.get_goal(goal_id, user_id)
-            if not existing_goal:
-                logger.info(f"Goal {goal_id} not found or user {user_id} has no permission")
-                return False
-            
-            success = await self.goal_repository.delete_goal(goal_id)
-            
-            if success:
-                logger.info(f"✅ Successfully deleted goal {goal_id}")
-            else:
-                logger.warning(f"Goal {goal_id} was not deleted")
-            
-            return success
-            
-        except PermissionError:
-            raise
+            destination_service = self._get_destination_service()
+            return await destination_service.delete_goal_wrapper(goal_id, user_id)
         except Exception as e:
             logger.error(f"❌ Error deleting goal: {e}")
             raise
@@ -332,12 +171,8 @@ class GoalService:
         logger.info(f"Getting goals for user_id: {user_id} with status: {status}")
         
         try:
-            all_goals = await self.get_all_user_goals(user_id)
-            filtered_goals = [goal for goal in all_goals if goal.status == status]
-            
-            logger.info(f"✅ Found {len(filtered_goals)} goals with status '{status}' for user {user_id}")
-            return filtered_goals
-            
+            destination_service = self._get_destination_service()
+            return await destination_service.get_goals_by_status_wrapper(user_id, status)
         except Exception as e:
             logger.error(f"❌ Error getting goals by status: {e}")
             raise
@@ -348,31 +183,14 @@ class GoalService:
         logger.info(f"Getting goals for user_id: {user_id} with priority: {priority}")
         
         try:
-            all_goals = await self.get_all_user_goals(user_id)
-            filtered_goals = [goal for goal in all_goals if goal.priority == priority]
-            
-            logger.info(f"✅ Found {len(filtered_goals)} goals with priority '{priority}' for user {user_id}")
-            return filtered_goals
-            
+            destination_service = self._get_destination_service()
+            return await destination_service.get_goals_by_priority_wrapper(user_id, priority)
         except Exception as e:
             logger.error(f"❌ Error getting goals by priority: {e}")
             raise
-    
+
     async def _send_goal_notification(self, goal: Goal, update_type: str):
-        """Send notification about goal updates"""
-        try:
-            from app.services.notification_service import NotificationService
-            notification_service = NotificationService()
-            
-            await notification_service.notify_goal_update(
-                user_id=goal.user_id,
-                goal_id=str(goal.id),
-                goal_title=goal.goal_statement,
-                update_type=update_type
-            )
-            
-            logger.info(f"✅ Sent {update_type} notification for goal: {goal.id}")
-            
-        except Exception as e:
-            logger.error(f"❌ Error sending goal notification: {e}")
-            # Don't raise the error as the goal operation was successful
+        """Send notification about goal updates (deprecated - kept for compatibility)"""
+        logger.info(f"Goal notification method called (deprecated): {update_type} for goal {goal.id}")
+        # This method is kept for any existing code that might call it directly
+        # The actual notifications are now handled by DestinationService

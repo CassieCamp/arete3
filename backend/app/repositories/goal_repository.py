@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class GoalRepository:
     def __init__(self):
-        self.collection_name = "goals"
+        self.collection_name = "destinations"  # Updated to use new collection name
 
     async def create_goal(self, goal: Goal) -> Goal:
         """Create a new goal"""

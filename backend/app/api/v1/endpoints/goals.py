@@ -6,7 +6,7 @@ from app.schemas.goal import (
     SuccessVisionSuggestionResponse, ProgressEntryResponse
 )
 from app.services.goal_service import GoalService
-from app.api.v1.deps import get_current_user
+from app.api.v1.deps import get_current_user_clerk_id
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,15 +17,15 @@ router = APIRouter()
 @router.post("/", response_model=GoalResponse, status_code=status.HTTP_201_CREATED)
 async def create_goal(
     goal_data: GoalCreateRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user_clerk_id)
 ):
     """Create a new goal with human-centered structure"""
     logger.info(f"=== POST /goals called ===")
-    logger.info(f"Creating goal for user: {current_user.get('user_id')}")
+    logger.info(f"Creating goal for user: {current_user}")
     
     try:
         goal_service = GoalService()
-        user_id = current_user["user_id"]
+        user_id = current_user
         goal = await goal_service.create_goal(user_id, goal_data.dict())
         
         # Convert to response format
@@ -61,15 +61,15 @@ async def create_goal(
 
 @router.get("/", response_model=List[GoalResponse])
 async def get_user_goals(
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user_clerk_id)
 ):
     """Get all goals for the current user"""
     logger.info(f"=== GET /goals called ===")
-    logger.info(f"Getting goals for user: {current_user.get('user_id')}")
+    logger.info(f"Getting goals for user: {current_user}")
     
     try:
         goal_service = GoalService()
-        user_id = current_user["user_id"]
+        user_id = current_user
         goals = await goal_service.get_all_user_goals(user_id)
         
         return [
@@ -107,14 +107,14 @@ async def get_user_goals(
 @router.get("/{goal_id}", response_model=GoalResponse)
 async def get_goal(
     goal_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user_clerk_id)
 ):
     """Get a specific goal by ID"""
     logger.info(f"=== GET /goals/{goal_id} called ===")
     
     try:
         goal_service = GoalService()
-        user_id = current_user["user_id"]
+        user_id = current_user
         goal = await goal_service.get_goal(goal_id, user_id)
         
         if not goal:
@@ -159,14 +159,14 @@ async def get_goal(
 async def update_goal(
     goal_id: str,
     goal_data: GoalUpdateRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user_clerk_id)
 ):
     """Update a goal"""
     logger.info(f"=== PUT /goals/{goal_id} called ===")
     
     try:
         goal_service = GoalService()
-        user_id = current_user["user_id"]
+        user_id = current_user
         
         # Filter out None values
         update_data = {k: v for k, v in goal_data.dict().items() if v is not None}
@@ -215,14 +215,14 @@ async def update_goal(
 async def update_progress(
     goal_id: str,
     progress_data: ProgressUpdateRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user_clerk_id)
 ):
     """Update goal progress with emoji and notes"""
     logger.info(f"=== POST /goals/{goal_id}/progress called ===")
     
     try:
         goal_service = GoalService()
-        user_id = current_user["user_id"]
+        user_id = current_user
         
         updated_goal = await goal_service.update_progress_emotion(
             goal_id, user_id, progress_data.emoji, progress_data.notes
@@ -269,14 +269,14 @@ async def update_progress(
 @router.get("/{goal_id}/progress", response_model=List[ProgressEntryResponse])
 async def get_progress_timeline(
     goal_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user_clerk_id)
 ):
     """Get progress timeline for a goal"""
     logger.info(f"=== GET /goals/{goal_id}/progress called ===")
     
     try:
         goal_service = GoalService()
-        user_id = current_user["user_id"]
+        user_id = current_user
         progress_timeline = await goal_service.get_progress_timeline(goal_id, user_id)
         
         return [
@@ -298,14 +298,14 @@ async def get_progress_timeline(
 @router.delete("/{goal_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_goal(
     goal_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user_clerk_id)
 ):
     """Delete a goal"""
     logger.info(f"=== DELETE /goals/{goal_id} called ===")
     
     try:
         goal_service = GoalService()
-        user_id = current_user["user_id"]
+        user_id = current_user
         success = await goal_service.delete_goal(goal_id, user_id)
         
         if not success:
@@ -327,14 +327,14 @@ async def delete_goal(
 @router.post("/suggestions", response_model=List[GoalSuggestionResponse])
 async def get_goal_suggestions(
     document_ids: List[str],
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user_clerk_id)
 ):
     """Get AI-powered goal suggestions based on documents"""
     logger.info(f"=== POST /goals/suggestions called ===")
     
     try:
         goal_service = GoalService()
-        user_id = current_user["user_id"]
+        user_id = current_user
         suggestions = await goal_service.suggest_goals_from_documents(user_id, document_ids)
         
         return [
@@ -356,14 +356,14 @@ async def get_goal_suggestions(
 @router.post("/success-vision-suggestions", response_model=SuccessVisionSuggestionResponse)
 async def get_success_vision_suggestions(
     goal_statement: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user_clerk_id)
 ):
     """Get success vision suggestions for a goal statement"""
     logger.info(f"=== POST /goals/success-vision-suggestions called ===")
     
     try:
         goal_service = GoalService()
-        user_context = {"user_id": current_user["user_id"]}
+        user_context = {"user_id": current_user}
         suggestions = await goal_service.enhance_success_vision(goal_statement, user_context)
         
         return SuccessVisionSuggestionResponse(suggestions=suggestions)

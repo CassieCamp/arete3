@@ -18,28 +18,28 @@ export function QuickActionsWidget({ userRole, maxActions = 6, className }: Quic
     {
       label: 'New Session Insight',
       icon: Brain,
-      href: '/dashboard/insights',
+      href: '/insights',
       description: 'Analyze a coaching session',
       color: 'text-purple-600'
     },
     {
       label: 'View Clients',
       icon: Users,
-      href: '/dashboard/connections',
+      href: '/connections',
       description: 'Manage client relationships',
       color: 'text-blue-600'
     },
     {
       label: 'Upload Document',
       icon: Upload,
-      href: '/dashboard/documents/upload',
+      href: '/documents/upload',
       description: 'Add client documents',
       color: 'text-green-600'
     },
     {
       label: 'View Documents',
       icon: FileText,
-      href: '/dashboard/documents',
+      href: '/documents',
       description: 'Browse uploaded files',
       color: 'text-orange-600'
     }
@@ -49,28 +49,28 @@ export function QuickActionsWidget({ userRole, maxActions = 6, className }: Quic
     {
       label: 'Set New Goal',
       icon: Target,
-      href: '/dashboard/goals',
+      href: '/goals',
       description: 'Create a new goal',
       color: 'text-red-600'
     },
     {
       label: 'Upload Document',
       icon: Upload,
-      href: '/dashboard/documents/upload',
+      href: '/documents/upload',
       description: 'Share documents with coach',
       color: 'text-green-600'
     },
     {
       label: 'View Insights',
       icon: Brain,
-      href: '/dashboard/insights',
+      href: '/insights',
       description: 'Review session insights',
       color: 'text-purple-600'
     },
     {
       label: 'View Documents',
       icon: FileText,
-      href: '/dashboard/documents',
+      href: '/documents',
       description: 'Browse your files',
       color: 'text-orange-600'
     }

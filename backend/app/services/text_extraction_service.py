@@ -1,7 +1,7 @@
 import os
 import logging
 from typing import Optional
-import PyPDF2
+import pypdf
 from docx import Document as DocxDocument
 import io
 import tempfile
@@ -144,7 +144,7 @@ class TextExtractionService:
             text_content = []
             
             with open(file_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
+                pdf_reader = pypdf.PdfReader(file)
                 
                 logger.info(f"PDF has {len(pdf_reader.pages)} pages")
                 

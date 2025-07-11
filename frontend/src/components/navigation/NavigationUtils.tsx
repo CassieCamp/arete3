@@ -2,32 +2,33 @@
 
 import { usePathname } from 'next/navigation';
 import { useNavigation } from './NavigationProvider';
-import { getNavigationItem } from '@/config/navigation';
+import { getMainNavigationItem } from '@/config/navigation';
 
 export function useCurrentNavigation() {
   const pathname = usePathname();
-  const { navigation } = useNavigation();
+  const { mainNavigation, menuNavigation } = useNavigation();
+  
+  // Combine all navigation items into a flat array for searching
+  const allNavigationItems = [
+    ...mainNavigation.filter(item => item.href), // Only include items with href
+    ...menuNavigation
+  ];
 
   // Find current navigation item
-  const currentItem = navigation
-    .flatMap(section => section.items)
-    .find(item => item.href === pathname);
+  const currentItem = allNavigationItems.find(item => item.href === pathname);
 
   // Find breadcrumb trail
   const breadcrumbs = [];
   if (currentItem) {
-    // Add section title
-    const section = navigation.find(s => s.items.includes(currentItem));
-    if (section && section.title !== 'Main') {
-      breadcrumbs.push({ title: section.title, href: '#' });
-    }
-    breadcrumbs.push({ title: currentItem.title, href: currentItem.href });
+    // For main navigation items, no section needed
+    // For menu navigation items, we could add a section if needed
+    breadcrumbs.push({ title: currentItem.label, href: currentItem.href });
   }
 
   return {
     currentItem,
     breadcrumbs,
-    pageTitle: currentItem?.title || 'Dashboard'
+    pageTitle: currentItem?.label || 'Dashboard'
   };
 }
 
@@ -62,7 +63,7 @@ export function PageHeader() {
         {currentItem?.icon && <currentItem.icon className="h-6 w-6 text-muted-foreground" />}
         <h1 className="text-2xl font-bold text-foreground">{pageTitle}</h1>
       </div>
-      {currentItem?.description && (
+      {currentItem && 'description' in currentItem && currentItem.description && (
         <p className="mt-2 text-muted-foreground">{currentItem.description}</p>
       )}
     </div>

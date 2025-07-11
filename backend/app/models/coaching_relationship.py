@@ -26,10 +26,13 @@ class PyObjectId(ObjectId):
 
 
 class RelationshipStatus(str, Enum):
-    PENDING_BY_COACH = "pending_by_coach"
+    PENDING = "pending"  # NEW: Simplified pending status
     ACTIVE = "active"
+    INACTIVE = "inactive"  # NEW: For inactive relationships
     DECLINED = "declined"
     DELETED = "deleted"  # For soft delete
+    # Legacy statuses for backward compatibility
+    PENDING_BY_COACH = "pending_by_coach"
 
 
 class CoachingRelationship(BaseModel):
@@ -42,7 +45,15 @@ class CoachingRelationship(BaseModel):
     id: Optional[PyObjectId] = Field(default=None, alias="_id")
     coach_user_id: str  # ID of the coach user
     client_user_id: str  # ID of the client user
-    status: RelationshipStatus = RelationshipStatus.PENDING_BY_COACH
+    status: RelationshipStatus = RelationshipStatus.PENDING
+    
+    # NEW: Pending relationship support
+    invited_by_email: Optional[str] = None
+    invitation_accepted_at: Optional[datetime] = None
+    
+    # NEW: Freemium transition tracking
+    upgraded_from_freemium: bool = False  # Default false
+    upgrade_date: Optional[datetime] = None
     
     # Soft delete fields
     deleted_at: Optional[datetime] = None

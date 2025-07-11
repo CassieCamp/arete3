@@ -11,6 +11,25 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "Literal[value=/^#[0-9a-fA-F]/]",
+          message: "Use CSS custom properties instead of hardcoded hex colors"
+        },
+        {
+          selector: "Literal[value=/^rgb\\(/]",
+          message: "Use CSS custom properties instead of rgb() functions"
+        },
+        {
+          selector: "Literal[value=/^hsl\\(/]",
+          message: "Use CSS custom properties instead of hsl() functions"
+        }
+      ]
+    }
+  }
 ];
 
 export default eslintConfig;

@@ -2,10 +2,17 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { getNavigationForRole, NavigationSection } from '@/config/navigation';
+import {
+  MAIN_NAVIGATION,
+  MENU_NAVIGATION,
+  getMenuNavigationForRole,
+  MainNavigationItem,
+  MenuNavigationItem
+} from '@/config/navigation';
 
 interface NavigationContextType {
-  navigation: NavigationSection[];
+  mainNavigation: MainNavigationItem[];
+  menuNavigation: MenuNavigationItem[];
   isMobileMenuOpen: boolean;
   setIsMobileMenuOpen: (open: boolean) => void;
   userRole: 'coach' | 'client' | null;
@@ -21,7 +28,7 @@ interface NavigationProviderProps {
 export function NavigationProvider({ children }: NavigationProviderProps) {
   const { user, isAuthenticated } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [navigation, setNavigation] = useState<NavigationSection[]>([]);
+  const [menuNavigation, setMenuNavigation] = useState<MenuNavigationItem[]>([]);
   const [userRole, setUserRole] = useState<'coach' | 'client' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -31,9 +38,9 @@ export function NavigationProvider({ children }: NavigationProviderProps) {
       const role = user.role as 'coach' | 'client' || 'client'; // Default to client
       setUserRole(role);
       
-      // Get navigation items for the user's role
-      const roleNavigation = getNavigationForRole(role);
-      setNavigation(roleNavigation);
+      // Get menu navigation items for the user's role
+      const roleMenuNavigation = getMenuNavigationForRole(role);
+      setMenuNavigation(roleMenuNavigation);
       setIsLoading(false);
     } else if (isAuthenticated === false) {
       // User is not authenticated
@@ -42,7 +49,8 @@ export function NavigationProvider({ children }: NavigationProviderProps) {
   }, [user, isAuthenticated]);
 
   const value: NavigationContextType = {
-    navigation,
+    mainNavigation: MAIN_NAVIGATION,
+    menuNavigation,
     isMobileMenuOpen,
     setIsMobileMenuOpen,
     userRole,
