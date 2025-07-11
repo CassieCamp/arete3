@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BasecampTab } from '@/components/mountain/BasecampTab';
+import { CenterTab } from '@/components/mountain/CenterTab';
 import { JourneyTab } from '@/components/mountain/JourneyTab';
 import { DestinationsTab } from '@/components/mountain/DestinationsTab';
 
 export default function MountainPage() {
-  const [activeTab, setActiveTab] = useState('basecamp');
+  const [activeTab, setActiveTab] = useState('center');
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -19,16 +19,16 @@ export default function MountainPage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-4xl mx-auto">
           <TabsList className="grid w-full grid-cols-2 mb-8">
-            <TabsTrigger value="basecamp" className="flex items-center gap-2">
-              🏕️ Basecamp
+            <TabsTrigger value="center" className="flex items-center gap-2">
+              🏕️ Center
             </TabsTrigger>
             <TabsTrigger value="journey" className="flex items-center gap-2">
               🗺️ Journey
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="basecamp">
-            <BasecampTab />
+          <TabsContent value="center">
+            <CenterTab />
           </TabsContent>
 
           <TabsContent value="journey">

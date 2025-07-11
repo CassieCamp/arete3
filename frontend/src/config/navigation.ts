@@ -2,11 +2,11 @@ import { LucideIcon } from 'lucide-react';
 import {
   Route,
   Mic,
-  Users,
   User,
-  Settings,
-  Tent
+  Settings
 } from 'lucide-react';
+import { CaveIcon } from '@/components/icons/CaveIcon';
+import { CoachIcon } from '@/components/icons/CoachIcon';
 
 // Main navigation items for the four-icon system
 export interface MainNavigationItem {
@@ -38,14 +38,14 @@ export const MAIN_NAVIGATION: MainNavigationItem[] = [
   },
   {
     id: 'basecamp',
-    icon: Tent,
-    label: 'Basecamp',
+    icon: CaveIcon as any,
+    label: 'Center',
     description: 'Your foundation and starting point',
     href: '/basecamp'
   },
   {
     id: 'compass',
-    icon: Users,
+    icon: CoachIcon as any,
     label: 'Coach',
     description: '',
     href: '/coach'

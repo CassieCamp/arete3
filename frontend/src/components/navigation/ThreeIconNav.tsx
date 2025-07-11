@@ -20,10 +20,10 @@ const NAV_ITEMS = [
     href: '/journey'
   },
   {
-    id: 'basecamp',
+    id: 'center',
     icon: Tent,
-    label: 'Basecamp',
-    href: '/basecamp'
+    label: 'Center',
+    href: '/center'
   },
   {
     id: 'coach',

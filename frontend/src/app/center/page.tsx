@@ -17,8 +17,8 @@ import {
   Tent
 } from "lucide-react";
 
-export default function BasecampPage() {
-  const basecampCards = [
+export default function CenterPage() {
+  const centerCards = [
     {
       id: "values",
       title: "My Values",
@@ -76,13 +76,13 @@ export default function BasecampPage() {
       <div className="container mx-auto px-4 py-8 md:pt-20 pb-20">
         <PageHeader
           icon={Tent}
-          title="Basecamp"
+          title="Center"
           subtitle=""
         />
         
         <div className="w-full max-w-4xl mx-auto">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {basecampCards.map((card) => {
+            {centerCards.map((card) => {
               const IconComponent = card.icon;
               
               const cardContent = (

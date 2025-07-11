@@ -7,7 +7,7 @@ import { useEntryModal } from '@/context/EntryModalContext';
 import { MainNavigationItem } from '@/config/navigation';
 
 interface BottomNavigationProps {
-  activeTab: 'mountain' | 'microphone' | 'compass' | 'basecamp' | null;
+  activeTab: 'mountain' | 'microphone' | 'compass' | 'center' | null;
   className?: string;
 }
 
@@ -65,7 +65,7 @@ export function SimpleBottomNavigation({
   activeTab,
   className = ""
 }: {
-  activeTab: 'mountain' | 'microphone' | 'compass' | 'basecamp' | null;
+  activeTab: 'mountain' | 'microphone' | 'compass' | 'center' | null;
   className?: string;
 }) {
   return (

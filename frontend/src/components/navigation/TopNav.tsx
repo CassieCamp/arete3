@@ -12,7 +12,7 @@ import { MainNavigationItem } from '@/config/navigation';
 import { AuthDropdown } from '@/components/auth/AuthDropdown';
 
 interface TopNavProps {
-  activeTab: 'mountain' | 'microphone' | 'compass' | 'basecamp' | null;
+  activeTab: 'mountain' | 'microphone' | 'compass' | 'center' | null;
   className?: string;
 }
 
@@ -124,7 +124,7 @@ export function SimpleTopNav({
   activeTab,
   className = ""
 }: {
-  activeTab: 'mountain' | 'microphone' | 'compass' | 'basecamp' | null;
+  activeTab: 'mountain' | 'microphone' | 'compass' | 'center' | null;
   className?: string;
 }) {
   return (

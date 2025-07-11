@@ -26,7 +26,7 @@ interface Destination {
   updated_at: string;
 }
 
-export function BasecampTab() {
+export function CenterTab() {
   const { getAuthToken } = useAuth();
   const entryService = useEntryService();
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -129,7 +129,7 @@ export function BasecampTab() {
     <div className="space-y-6">
       <div className="text-center mb-8">
         <div className="text-4xl mb-2">🏕️</div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Basecamp</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Center</h2>
         <p className="text-gray-600">Your most recent activity and progress</p>
       </div>
 

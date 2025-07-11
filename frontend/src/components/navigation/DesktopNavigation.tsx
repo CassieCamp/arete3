@@ -14,7 +14,7 @@ import { useEntryModal } from '@/context/EntryModalContext';
 import { MainNavigationItem, MenuNavigationItem } from '@/config/navigation';
 
 interface DesktopNavigationProps {
-  activeTab: 'mountain' | 'microphone' | 'compass' | 'basecamp' | null;
+  activeTab: 'mountain' | 'microphone' | 'compass' | 'center' | null;
   className?: string;
 }
 
@@ -172,7 +172,7 @@ export function SimpleDesktopNavigation({
   activeTab,
   className = ""
 }: {
-  activeTab: 'mountain' | 'microphone' | 'compass' | 'basecamp' | null;
+  activeTab: 'mountain' | 'microphone' | 'compass' | 'center' | null;
   className?: string;
 }) {
   return (
