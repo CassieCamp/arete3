@@ -41,7 +41,7 @@ export const MAIN_NAVIGATION: MainNavigationItem[] = [
     icon: CaveIcon as any,
     label: 'Center',
     description: 'Your foundation and starting point',
-    href: '/basecamp'
+    href: '/center'
   },
   {
     id: 'compass',

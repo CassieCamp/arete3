@@ -102,6 +102,17 @@ INITIAL_QUOTES = [
         "display_count": 0,
         "like_count": 0,
         "created_by": "system"
+    },
+    {
+        "quote_text": "Luke Skywalker: What's in the cave?\nYoda: Only what you bring with you.",
+        "author": "",
+        "source": "The Empire Strikes Back",
+        "category": "wisdom",
+        "tags": ["wisdom", "self-reflection", "inner-journey", "fear"],
+        "active": True,
+        "display_count": 0,
+        "like_count": 0,
+        "created_by": "system"
     }
 ]
 

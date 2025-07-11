@@ -9,7 +9,7 @@ const isProtectedRoute = createRouteMatcher([
   '/insights(.*)',
   '/journey(.*)',
   '/mountain(.*)',
-  '/basecamp(.*)',
+  '/center(.*)',
   '/connections(.*)',
   '/settings(.*)',
   '/coach(.*)',
