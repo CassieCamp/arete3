@@ -11,21 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 
 interface UploadFormData {
   file: File | null;
-  category: string;
-  description: string;
 }
-
-const DOCUMENT_CATEGORIES = [
-  { value: "resume", label: "Resume" },
-  { value: "performance_review", label: "Performance Review" },
-  { value: "goals_objectives", label: "Goals & Objectives" },
-  { value: "feedback", label: "Feedback" },
-  { value: "assessment", label: "Assessment" },
-  { value: "development_plan", label: "Development Plan" },
-  { value: "project_documentation", label: "Project Documentation" },
-  { value: "meeting_notes", label: "Meeting Notes" },
-  { value: "other", label: "Other" },
-];
 
 const SUPPORTED_FILE_TYPES = [
   "pdf", "docx", "doc", "txt", "rtf", "odt"
@@ -36,8 +22,6 @@ export default function DocumentUploadPage() {
   const { getAuthToken } = useAuth();
   const [formData, setFormData] = useState<UploadFormData>({
     file: null,
-    category: "",
-    description: "",
   });
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -80,10 +64,10 @@ export default function DocumentUploadPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.file || !formData.category) {
+    if (!formData.file) {
       setMessage({
         type: 'error',
-        text: 'Please select a file and category'
+        text: 'Please select a file'
       });
       return;
     }
@@ -101,10 +85,8 @@ export default function DocumentUploadPage() {
       // Create FormData object
       const uploadFormData = new FormData();
       uploadFormData.append('file', formData.file);
-      uploadFormData.append('category', formData.category);
-      if (formData.description.trim()) {
-        uploadFormData.append('description', formData.description.trim());
-      }
+      // AI will automatically generate category and description
+      uploadFormData.append('category', 'other'); // Default category, AI will override
 
       // Make API request
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/documents/upload`, {
@@ -124,14 +106,12 @@ export default function DocumentUploadPage() {
       
       setMessage({
         type: 'success',
-        text: `Document "${result.file_name}" uploaded successfully!`
+        text: `Document "${result.file_name}" uploaded successfully! AI has generated intelligent metadata.`
       });
 
       // Reset form
       setFormData({
         file: null,
-        category: "",
-        description: "",
       });
 
       // Clear file input
@@ -167,7 +147,7 @@ export default function DocumentUploadPage() {
           <CardHeader>
             <CardTitle>Document Upload</CardTitle>
             <CardDescription>
-              Upload documents such as resumes, performance reviews, or development plans
+              Upload your documents and let AI automatically generate intelligent titles, categories, and descriptions
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -185,43 +165,17 @@ export default function DocumentUploadPage() {
                 <p className="text-sm text-gray-500">
                   Supported formats: PDF, DOCX, DOC, TXT, RTF, ODT (max 10MB)
                 </p>
-              </div>
-
-              {/* Category Dropdown */}
-              <div className="space-y-2">
-                <Label htmlFor="category">Category *</Label>
-                <select
-                  id="category"
-                  value={formData.category}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    category: e.target.value
-                  }))}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                  required
-                >
-                  <option value="">Select a category</option>
-                  {DOCUMENT_CATEGORIES.map((category) => (
-                    <option key={category.value} value={category.value}>
-                      {category.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Description Textarea */}
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Add a description or notes about this document..."
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    description: e.target.value
-                  }))}
-                  rows={3}
-                />
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-sm text-blue-800">
+                    <strong>✨ AI-Powered Processing:</strong> Our AI will automatically analyze your document and generate:
+                  </p>
+                  <ul className="text-sm text-blue-700 mt-1 ml-4 list-disc">
+                    <li>Intelligent, descriptive title</li>
+                    <li>Appropriate category classification</li>
+                    <li>Relevant tags and metadata</li>
+                    <li>Content-based description</li>
+                  </ul>
+                </div>
               </div>
 
               {/* Message Display */}
@@ -246,12 +200,12 @@ export default function DocumentUploadPage() {
                 >
                   Back
                 </Button>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="flex-1"
-                  disabled={isUploading || !formData.file || !formData.category}
+                  disabled={isUploading || !formData.file}
                 >
-                  {isUploading ? 'Uploading...' : 'Upload Document'}
+                  {isUploading ? 'Uploading & AI Processing...' : 'Upload Document'}
                 </Button>
               </div>
             </form>

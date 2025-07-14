@@ -10,6 +10,7 @@ export interface Entry {
   session_date?: string;
   status: string;
   has_insights: boolean;
+  transcript_source?: string; // "file_upload", "text_input", "url_import"
 }
 
 export interface DetectedGoal {

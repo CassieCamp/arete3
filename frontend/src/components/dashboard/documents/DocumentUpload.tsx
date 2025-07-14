@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/context/AuthContext";
+import { useApiClient } from "@/utils/api";
 
 interface UploadFormData {
   file: File | null;
@@ -37,7 +37,7 @@ interface DocumentUploadProps {
 }
 
 export function DocumentUpload({ onUploadSuccess, onCancel, compact = false }: DocumentUploadProps) {
-  const { getAuthToken } = useAuth();
+  const { makeApiCall } = useApiClient();
   const [formData, setFormData] = useState<UploadFormData>({
     file: null,
     category: "",
@@ -96,12 +96,6 @@ export function DocumentUpload({ onUploadSuccess, onCancel, compact = false }: D
     setMessage(null);
 
     try {
-      // Get authentication token
-      const token = await getAuthToken();
-      if (!token) {
-        throw new Error('Authentication token not available');
-      }
-
       // Create FormData object
       const uploadFormData = new FormData();
       uploadFormData.append('file', formData.file);
@@ -111,11 +105,8 @@ export function DocumentUpload({ onUploadSuccess, onCancel, compact = false }: D
       }
 
       // Make API request
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/documents/upload`, {
+      const response = await makeApiCall('/api/v1/documents/upload', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
         body: uploadFormData,
       });
 

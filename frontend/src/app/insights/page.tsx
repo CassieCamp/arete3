@@ -320,7 +320,7 @@ export default function SessionInsightsPage() {
                       You need an active coaching relationship to create session insights.
                     </p>
                     <Button
-                      onClick={() => router.push('/connections')}
+                      onClick={() => router.push('/member/coaching')}
                       className="bg-blue-600 hover:bg-blue-700"
                     >
                       Manage Connections

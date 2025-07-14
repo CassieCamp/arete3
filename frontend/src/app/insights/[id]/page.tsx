@@ -26,7 +26,7 @@ export default function DynamicInsightPage() {
     setIsModalOpen(false);
     // Small delay to allow modal close animation before navigation
     setTimeout(() => {
-      router.push('/journey');
+      router.push('/member/journey');
     }, 150);
   };
 

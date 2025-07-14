@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useEntryService, Entry } from '@/services/entryService';
 import { useAuth } from '@/context/AuthContext';
+import { FileText, MessageSquare, Lightbulb, Plus } from 'lucide-react';
 
 interface EntryGroup {
   month: string;
@@ -82,12 +83,25 @@ export function JourneyTab() {
     return groups;
   }, []);
 
-  const getTypeLabel = (type: string) => {
-    return type === 'fresh_thought' ? 'Fresh Thought' : 'Session';
+  const getTypeLabel = (entry: Entry) => {
+    if (entry.transcript_source === 'file_upload') {
+      return 'Document Insight';
+    }
+    return entry.entry_type === 'fresh_thought' ? 'Fresh Thought' : 'Session';
   };
 
-  const getTypeColor = (type: string) => {
-    return type === 'fresh_thought' ? 'bg-green-100 text-green-800' : 'bg-muted text-muted-foreground';
+  const getTypeColor = (entry: Entry) => {
+    if (entry.transcript_source === 'file_upload') {
+      return 'bg-blue-100 text-blue-800';
+    }
+    return entry.entry_type === 'fresh_thought' ? 'bg-green-100 text-green-800' : 'bg-muted text-muted-foreground';
+  };
+
+  const getTypeIcon = (entry: Entry) => {
+    if (entry.transcript_source === 'file_upload') {
+      return FileText;
+    }
+    return entry.entry_type === 'fresh_thought' ? Lightbulb : MessageSquare;
   };
 
   const handleCardClick = (entry: Entry) => {
@@ -115,13 +129,65 @@ export function JourneyTab() {
 
   if (entries.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="text-6xl mb-4">🗺️</div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">Your Journey Starts Here</h3>
-        <p className="text-gray-600 mb-6">
-          Add your first entry to begin your journey.
-        </p>
-      </div>
+      <>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="relative">
+            <div
+              className="absolute inset-0 rounded-3xl"
+              style={{
+                backgroundImage: 'linear-gradient(135deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.15) 30%, rgba(0, 0, 0, 0.08) 60%, transparent 100%)'
+              }}
+            />
+            <p className="relative text-4xl italic font-serif text-primary-foreground text-center px-8 py-6">
+              The first step of your journey is to add a reflection.
+            </p>
+          </div>
+        </div>
+
+        {/* Fixed Add Button - positioned above bottom navigation with animation for empty state */}
+        <div className="fixed bottom-20 right-6 z-10">
+          <div
+            className="rounded-full w-14 h-14 bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center"
+            onClick={() => router.push('/documents/upload')}
+            role="button"
+            tabIndex={0}
+            aria-label="Add new entry"
+            style={{
+              animation: 'glowPulse 4s ease-in-out infinite, scalePulse 3s ease-in-out infinite'
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                router.push('/documents/upload');
+              }
+            }}
+          >
+            <span className="text-2xl">+</span>
+          </div>
+        </div>
+        
+        {/* CSS animations using style tag */}
+        <style jsx>{`
+          @keyframes glowPulse {
+            0%, 100% {
+              box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.1), 0 0 16px 4px oklch(0.9583 0.0111 89.7230 / 0.4);
+            }
+            50% {
+              box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.1), 0 0 24px 8px oklch(0.9583 0.0111 89.7230 / 0.6);
+            }
+          }
+          
+          @keyframes scalePulse {
+            0%, 100% {
+              transform: scale(1);
+              opacity: 0.9;
+            }
+            50% {
+              transform: scale(1.05);
+              opacity: 1;
+            }
+          }
+        `}</style>
+      </>
     );
   }
 
@@ -145,10 +211,15 @@ export function JourneyTab() {
                           <CardHeader className="pb-3 md:pb-3 sm:pb-2">
                             {/* Desktop Layout */}
                             <div className="hidden md:block">
-                              <CardTitle className="text-lg mb-2">{entry.title}</CardTitle>
+                              <div className="flex items-start gap-2 mb-2">
+                                {React.createElement(getTypeIcon(entry), {
+                                  className: "w-5 h-5 mt-0.5 text-gray-600 flex-shrink-0"
+                                })}
+                                <CardTitle className="text-lg">{entry.title}</CardTitle>
+                              </div>
                               <div className="flex items-center gap-2">
-                                <Badge className={getTypeColor(entry.entry_type)}>
-                                  {getTypeLabel(entry.entry_type)}
+                                <Badge className={getTypeColor(entry)}>
+                                  {getTypeLabel(entry)}
                                 </Badge>
                                 <span className="text-sm text-gray-500">
                                   {format(new Date(entry.created_at), 'MMM d, yyyy')}
@@ -158,10 +229,15 @@ export function JourneyTab() {
                             
                             {/* Mobile Layout */}
                             <div className="md:hidden">
-                              <CardTitle className="text-lg w-full mb-2">{entry.title}</CardTitle>
+                              <div className="flex items-start gap-2 mb-2">
+                                {React.createElement(getTypeIcon(entry), {
+                                  className: "w-4 h-4 mt-1 text-gray-600 flex-shrink-0"
+                                })}
+                                <CardTitle className="text-lg w-full">{entry.title}</CardTitle>
+                              </div>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <Badge className={`${getTypeColor(entry.entry_type)} text-xs`}>
-                                  {getTypeLabel(entry.entry_type)}
+                                <Badge className={`${getTypeColor(entry)} text-xs`}>
+                                  {getTypeLabel(entry)}
                                 </Badge>
                                 <span className="text-xs text-gray-500">
                                   {format(new Date(entry.created_at), 'MMM d, yyyy')}
@@ -202,28 +278,12 @@ export function JourneyTab() {
       <div className="fixed bottom-20 right-6 z-10">
         <Button
           onClick={() => router.push('/documents/upload')}
-          className="rounded-full w-14 h-14 shadow-lg hover:shadow-xl transition-all bg-primary text-primary-foreground subtle-pulse"
+          className="rounded-full w-14 h-14 shadow-lg hover:shadow-xl transition-all bg-primary text-primary-foreground"
           aria-label="Add new entry"
         >
           <span className="text-2xl">+</span>
         </Button>
       </div>
-      
-      {/* Global CSS for subtle pulse effect */}
-      <style jsx global>{`
-        @keyframes subtle-glow {
-          0%, 100% {
-            box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.1), 0 0 8px 2px rgba(248, 250, 252, 0.1);
-          }
-          50% {
-            box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.1), 0 0 12px 4px rgba(248, 250, 252, 0.2);
-          }
-        }
-        
-        .subtle-pulse {
-          animation: subtle-glow 4s ease-in-out infinite;
-        }
-      `}</style>
     </div>
   );
 }

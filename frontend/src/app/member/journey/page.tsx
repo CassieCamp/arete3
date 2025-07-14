@@ -14,7 +14,7 @@ export default function JourneyPage() {
       <MeanderingPathway />
       
       {/* Gradient fade overlay for top section */}
-      <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-slate-900 via-slate-900/80 to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-background via-background/80 to-transparent z-10 pointer-events-none" />
       
       {/* Custom layout for Journey page to override AppLayout constraints */}
       <div className="relative z-20 min-h-screen">
@@ -25,12 +25,12 @@ export default function JourneyPage() {
             <ThreeIconNav />
             <div className="min-h-screen flex flex-col relative -mt-6 -mb-20 md:-mb-6">
               {/* Main content with higher z-index - white text for dark background */}
-              <div className="flex-1 flex flex-col items-center justify-start pt-8 md:pt-20 px-4 relative z-10 text-white">
+              <div className="flex-1 flex flex-col items-center justify-start pt-8 md:pt-20 px-4 relative z-10 text-foreground">
                 <div className="w-full max-w-3xl">
                   <PageHeader
                     icon={Route}
                     title="Journey"
-                    className="[&_h1]:text-white [&_svg]:text-white/80"
+                    className="[&_h1]:text-foreground [&_svg]:text-muted-foreground"
                   />
                   <div className="mt-8">
                     <JourneyTab />

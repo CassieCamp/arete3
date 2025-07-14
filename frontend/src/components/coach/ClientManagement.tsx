@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Users, Clock, FileText, Plus, Eye, MessageSquare, Mail, Calendar } from 'lucide-react';
 import { ClientDetailsModal } from './ClientDetailsModal';
 import { InviteClientModal } from './InviteClientModal';
-import { useAuth } from '@/context/AuthContext';
+import { useApiClient } from '@/utils/api';
 
 interface CoachClient {
   id: string;
@@ -26,7 +26,7 @@ interface ClientManagementProps {
 }
 
 export function ClientManagement({ clients, onUpdate }: ClientManagementProps) {
-  const { getAuthToken } = useAuth();
+  const { makeApiCall } = useApiClient();
   const [selectedClient, setSelectedClient] = useState<CoachClient | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,16 +70,9 @@ export function ClientManagement({ clients, onUpdate }: ClientManagementProps) {
   const handleResendInvite = async (clientId: string) => {
     try {
       setIsLoading(true);
-      const token = await getAuthToken();
-      if (!token) throw new Error('No authentication token');
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/v1/coach/clients/${clientId}/resend-invite`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+      const response = await makeApiCall(`/api/v1/coach/clients/${clientId}/resend-invite`, {
+        method: 'POST'
       });
 
       if (!response.ok) {

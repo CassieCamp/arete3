@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { sessionInsightService, SessionInsight } from '@/services/sessionInsightService';
 import { useEntryService, Entry } from '@/services/entryService';
-import { useAuth } from '@/context/AuthContext';
-import { useAuth as useClerkAuth } from '@clerk/nextjs';
+import { useAuth as useClerkAuth, useUser } from '@clerk/nextjs';
 
 export interface UseInsightNavigationResult {
   insights: SessionInsight[];
@@ -24,10 +23,20 @@ export function useInsightNavigation(currentInsightId: string): UseInsightNaviga
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { getAuthToken } = useAuth();
-  const { isSignedIn, isLoaded } = useClerkAuth();
+  const { isSignedIn, getToken } = useClerkAuth();
+  const { isLoaded } = useUser();
   const router = useRouter();
   const entryService = useEntryService();
+
+  const getAuthToken = async (): Promise<string | null> => {
+    if (!isSignedIn) return null;
+    try {
+      return await getToken();
+    } catch (error) {
+      console.error('Failed to get auth token:', error);
+      return null;
+    }
+  };
 
   const fetchAllInsights = useCallback(async () => {
     if (!currentInsightId) {

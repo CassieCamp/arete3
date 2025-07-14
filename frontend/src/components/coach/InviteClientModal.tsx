@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Mail, Send, X } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { useApiClient } from '@/utils/api';
 
 interface InviteClientModalProps {
   isOpen: boolean;
@@ -16,7 +16,7 @@ interface InviteClientModalProps {
 }
 
 export function InviteClientModal({ isOpen, onClose, onSuccess }: InviteClientModalProps) {
-  const { getAuthToken } = useAuth();
+  const { makeApiCall } = useApiClient();
   const [formData, setFormData] = useState({
     email: '',
     personalMessage: ''
@@ -41,18 +41,8 @@ export function InviteClientModal({ isOpen, onClose, onSuccess }: InviteClientMo
       setIsSubmitting(true);
       setError(null);
 
-      const token = await getAuthToken();
-      if (!token) {
-        throw new Error('No authentication token available');
-      }
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/v1/coaching-relationships/invite`, {
+      const response = await makeApiCall('/api/v1/coaching-relationships/invite', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           client_email: formData.email.trim(),
           personal_message: formData.personalMessage.trim() || undefined

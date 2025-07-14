@@ -12,9 +12,9 @@ interface AppLayoutProps {
 
 // Utility function to determine active tab based on pathname
 function getActiveTab(pathname: string): 'mountain' | 'microphone' | 'compass' | 'center' | null {
-  if (pathname.includes('/journey') || pathname.includes('/mountain')) {
+  if (pathname.includes('/member/journey') || pathname.includes('/journey') || pathname.includes('/mountain')) {
     return 'mountain';
-  } else if (pathname.includes('/center')) {
+  } else if (pathname.includes('/member/center') || pathname.includes('/center')) {
     return 'center';
   } else if (pathname.includes('/coach')) {
     return 'compass';

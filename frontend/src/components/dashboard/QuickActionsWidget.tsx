@@ -25,7 +25,7 @@ export function QuickActionsWidget({ userRole, maxActions = 6, className }: Quic
     {
       label: 'View Clients',
       icon: Users,
-      href: '/connections',
+      href: '/member/coaching',
       description: 'Manage client relationships',
       color: 'text-blue-600'
     },

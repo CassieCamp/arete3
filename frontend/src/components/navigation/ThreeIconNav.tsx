@@ -1,14 +1,15 @@
 "use client";
 
+import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser, UserButton } from '@clerk/nextjs';
-import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Route, Users, BarChart3 } from 'lucide-react';
 import { CaveIcon } from '@/components/icons/CaveIcon';
 import { RippleIcon } from '@/components/icons/RippleIcon';
 import { CoachIcon } from '@/components/icons/CoachIcon';
+import { PracticeIcon } from '@/components/icons/PracticeIcon';
 import { AuthDropdown } from '@/components/auth/AuthDropdown';
 
 interface ThreeIconNavProps {
@@ -18,38 +19,45 @@ interface ThreeIconNavProps {
 // Navigation items specifically for the three-icon nav
 const ALL_NAV_ITEMS = [
   {
-    id: 'console',
-    icon: BarChart3,
-    label: 'Console',
-    href: '/console',
-    roles: ['coach'] as ('client' | 'coach')[] // Only show for coaches
-  },
-  {
     id: 'journey',
     icon: Route,
     label: 'Journey',
-    href: '/journey',
+    href: '/member/journey',
     roles: ['client'] as ('client' | 'coach')[] // Only show for clients
   },
   {
     id: 'center',
     icon: CaveIcon as any,
     label: 'Center',
-    href: '/center',
+    href: '/member/center',
     roles: ['client'] as ('client' | 'coach')[] // Only show for clients
+  },
+  {
+    id: 'coaching',
+    icon: CoachIcon as any,
+    label: 'Coaching',
+    href: '/member/coaching',
+    roles: ['client'] as ('client' | 'coach')[] // Only show for clients
+  },
+  {
+    id: 'practice',
+    icon: PracticeIcon as any,
+    label: 'Practice',
+    href: '/coach/practice',
+    roles: ['coach'] as ('client' | 'coach')[] // Only show for coaches
   },
   {
     id: 'clients',
     icon: RippleIcon as any,
     label: 'Clients',
-    href: '/clients',
+    href: '/coach/clients',
     roles: ['coach'] as ('client' | 'coach')[] // Only show for coaches
   },
   {
     id: 'profile',
     icon: CoachIcon as any,
     label: 'Profile',
-    href: '/coach',
+    href: '/coach/profile',
     roles: ['client', 'coach'] as ('client' | 'coach')[] // Show for both
   }
 ];
@@ -57,8 +65,7 @@ const ALL_NAV_ITEMS = [
 export function ThreeIconNav({ className = "" }: ThreeIconNavProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user } = useUser();
-  const { user: authUser, roleLoaded } = useAuth();
+  const { user, isLoaded } = useUser();
 
   const handleNavigation = (href: string) => {
     router.push(href);
@@ -68,17 +75,21 @@ export function ThreeIconNav({ className = "" }: ThreeIconNavProps) {
     return pathname === href || pathname.startsWith(href + '/');
   };
 
-  // Don't render anything until the role is loaded
-  if (!roleLoaded) {
+  // Don't render anything until the user data is loaded
+  if (!isLoaded) {
     return null;
   }
 
+  // Get user role from Clerk's publicMetadata
+  const userRole = user?.publicMetadata?.primary_role as string;
+  const legacyRole = userRole === 'coach' ? 'coach' : 'client';
+
   // Filter navigation items based on user role
   const NAV_ITEMS = ALL_NAV_ITEMS.filter(item => {
-    if (!authUser?.role) {
+    if (!legacyRole) {
       return false;
     }
-    return item.roles.includes(authUser.role);
+    return item.roles.includes(legacyRole);
   });
 
   return (
@@ -91,9 +102,11 @@ export function ThreeIconNav({ className = "" }: ThreeIconNavProps) {
         <div className="flex justify-between items-center w-full max-w-6xl mx-auto">
           {/* Left side - Logo */}
           <div className="flex items-center">
-            <h1 className="text-2xl font-serif font-bold text-gray-900 dark:text-white">
-              Arete
-            </h1>
+            <Link href="/">
+              <h1 className="text-2xl font-serif font-bold text-gray-900 dark:text-white cursor-pointer hover:opacity-80 transition-opacity">
+                Arete
+              </h1>
+            </Link>
           </div>
           
           {/* Center - Navigation Items */}

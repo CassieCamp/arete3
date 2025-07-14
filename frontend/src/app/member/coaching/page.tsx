@@ -228,13 +228,13 @@ export default function ConnectionsPage() {
       <div className="space-y-6">
         {/* Error and Success Messages */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-red-800">{error}</p>
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+            <p className="text-destructive">{error}</p>
           </div>
         )}
         {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
-            <p className="text-green-800">{success}</p>
+          <div className="mb-6 p-4 bg-secondary/10 border border-secondary/20 rounded-md">
+            <p className="text-secondary-foreground">{success}</p>
           </div>
         )}
 
@@ -376,7 +376,7 @@ export default function ConnectionsPage() {
                             Connected: {new Date(relationship.updated_at).toLocaleDateString()}
                           </p>
                         </div>
-                        <span className="px-2 py-1 bg-secondary/20 text-secondary text-xs rounded-full">
+                        <span className="px-2 py-1 bg-secondary/20 text-secondary-foreground text-xs rounded-full">
                           Active
                         </span>
                       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useUser, useAuth as useClerkAuth } from '@clerk/nextjs';
 import {
   MAIN_NAVIGATION,
   MENU_NAVIGATION,
@@ -26,7 +26,8 @@ interface NavigationProviderProps {
 }
 
 export function NavigationProvider({ children }: NavigationProviderProps) {
-  const { user, isAuthenticated, roleLoaded } = useAuth();
+  const { user, isLoaded } = useUser();
+  const { isSignedIn } = useClerkAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [menuNavigation, setMenuNavigation] = useState<MenuNavigationItem[]>([]);
   const [mainNavigation, setMainNavigation] = useState<MainNavigationItem[]>([]);
@@ -34,29 +35,32 @@ export function NavigationProvider({ children }: NavigationProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (isAuthenticated && user && roleLoaded) {
-      // Determine user role from user object or profile
-      const role = user.role as 'coach' | 'client' || 'client'; // Default to client
-      setUserRole(role);
-      
-      // Filter main navigation items based on role using the roles property
-      const filteredMainNavigation = MAIN_NAVIGATION.filter(item => {
-        return item.roles.includes(role);
-      });
-      setMainNavigation(filteredMainNavigation);
-      
-      // Get menu navigation items for the user's role
-      const roleMenuNavigation = getMenuNavigationForRole(role);
-      setMenuNavigation(roleMenuNavigation);
-      setIsLoading(false);
-    } else if (isAuthenticated === false) {
-      // User is not authenticated
-      setIsLoading(false);
-    } else if (!roleLoaded) {
-      // Still loading role
-      setIsLoading(true);
+    if (isLoaded) {
+      if (isSignedIn && user) {
+        // Get user role from Clerk's publicMetadata
+        const primaryRole = user.publicMetadata?.primary_role as string;
+        const role = primaryRole === 'coach' ? 'coach' : 'client'; // Convert to legacy format
+        setUserRole(role);
+
+        // Filter main navigation items based on role using the roles property
+        const filteredMainNavigation = MAIN_NAVIGATION.filter(item => {
+          return item.legacyRoles?.includes(role) || item.roles.includes(primaryRole);
+        });
+        setMainNavigation(filteredMainNavigation);
+
+        // Get menu navigation items for the user's role
+        const roleMenuNavigation = getMenuNavigationForRole(role);
+        setMenuNavigation(roleMenuNavigation);
+        setIsLoading(false);
+      } else {
+        // User is not authenticated
+        setUserRole(null);
+        setMainNavigation([]);
+        setMenuNavigation([]);
+        setIsLoading(false);
+      }
     }
-  }, [user, isAuthenticated, roleLoaded]);
+  }, [user, isLoaded, isSignedIn]);
 
   const value: NavigationContextType = {
     mainNavigation,

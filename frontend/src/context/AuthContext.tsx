@@ -1,23 +1,38 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { useAuth as useClerkAuth, useUser } from "@clerk/nextjs";
+import React, { createContext, useContext, ReactNode, useMemo } from 'react';
+import { useAuth as useClerkAuth, useUser, useOrganization, useOrganizationList } from "@clerk/nextjs";
+
+interface OrganizationRole {
+  organizationId: string;
+  organizationName: string;
+  role: string;
+  orgType: 'coach' | 'member' | 'arete';
+  permissions: string[];
+}
 
 interface User {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
+  primaryRole: 'admin' | 'coach' | 'member';
+  organizationRoles: OrganizationRole[];
+  permissions: string[];
+  clerkId: string;
+  // Legacy support for existing code
   role?: 'coach' | 'client';
-  clerkId?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   roleLoaded: boolean;
+  currentRole: string | null;
+  currentOrganization: string | null;
   login: (user: User) => void;
   logout: () => void;
+  hasPermission: (permission: string) => boolean;
   getAuthToken: () => Promise<string | null>;
 }
 
@@ -36,83 +51,87 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  // Use Clerk hooks directly - these are reactive and handle their own state
   const { isSignedIn, getToken } = useClerkAuth();
-  const { user: clerkUser } = useUser();
-  const [userRole, setUserRoleState] = useState<'coach' | 'client' | undefined>();
-  const [roleLoaded, setRoleLoaded] = useState(false);
+  const { user: clerkUser, isLoaded: userLoaded } = useUser();
+  const { organization } = useOrganization();
+  const { userMemberships, isLoaded: membershipsLoaded } = useOrganizationList();
 
-  // Fetch user role from backend when user is authenticated
-  React.useEffect(() => {
-    const fetchUserRole = async () => {
-      console.log('🐛 DEBUG - AuthContext fetchUserRole:', {
-        isSignedIn,
-        hasClerkUser: !!clerkUser,
-        roleLoaded,
-        currentUserRole: userRole,
-        timestamp: new Date().toISOString()
-      });
-      
-      if (isSignedIn && clerkUser && !roleLoaded) {
-        try {
-          console.log('🐛 DEBUG - Fetching user role from backend...');
-          const token = await getToken();
-          if (token) {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-            const response = await fetch(`${apiUrl}/api/v1/users/me`, {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
-            });
-            
-            if (response.ok) {
-              const userData = await response.json();
-              console.log('🐛 DEBUG - Successfully fetched user data:', userData);
-              setUserRoleState(userData.role);
-              setRoleLoaded(true);
-            } else {
-              console.log('🐛 DEBUG - Failed to fetch user data, response not ok:', response.status);
-            }
-          } else {
-            console.log('🐛 DEBUG - No token available');
-          }
-        } catch (error) {
-          console.error('🐛 DEBUG - Failed to fetch user role:', error);
-          setRoleLoaded(true); // Set to true even on error to prevent infinite loading
-        }
-      }
+  // Compute derived values using useMemo to prevent unnecessary recalculations
+  const user = useMemo((): User | null => {
+    if (!isSignedIn || !clerkUser || !userLoaded) return null;
+
+    // Convert Clerk organization memberships to our format
+    const organizationRoles: OrganizationRole[] = userMemberships?.data?.map(membership => ({
+      organizationId: membership.organization.id,
+      organizationName: membership.organization.name,
+      role: membership.role,
+      orgType: 'member', // Default for now - can be enhanced later
+      permissions: [] // Permissions can be derived from role and org type
+    })) || [];
+
+    return {
+      id: clerkUser.id,
+      firstName: clerkUser.firstName || '',
+      lastName: clerkUser.lastName || '',
+      email: clerkUser.emailAddresses[0]?.emailAddress || '',
+      primaryRole: (clerkUser.publicMetadata?.role as 'admin' | 'coach' | 'member') || 'member',
+      organizationRoles,
+      permissions: [], // Can be computed from organization roles
+      clerkId: clerkUser.id,
+      // Legacy support
+      role: clerkUser.publicMetadata?.role === 'coach' ? 'coach' : 'client'
     };
+  }, [isSignedIn, clerkUser, userLoaded, userMemberships]);
 
-    fetchUserRole();
-  }, [isSignedIn, clerkUser, getToken, roleLoaded]);
+  // Compute current role and organization
+  const currentRole = useMemo((): string | null => {
+    if (!user) return null;
 
-  // Create user object from Clerk data
-  const user: User | null = isSignedIn && clerkUser ? {
-    id: clerkUser.id,
-    firstName: clerkUser.firstName || '',
-    lastName: clerkUser.lastName || '',
-    email: clerkUser.emailAddresses[0]?.emailAddress || '',
-    role: userRole,
-    clerkId: clerkUser.id
-  } : null;
+    if (organization && userMemberships?.data) {
+      // User is in an organization context - use Clerk's data directly
+      const membership = userMemberships.data.find(m => m.organization.id === organization.id);
+      return membership?.role || user.primaryRole;
+    }
+    
+    // User is in personal account context
+    return user.primaryRole;
+  }, [user, organization, userMemberships]);
 
-  console.log('🐛 DEBUG - AuthContext user object:', {
-    user,
-    userRole,
-    roleLoaded,
-    timestamp: new Date().toISOString()
-  });
+  const currentOrganization = useMemo((): string | null => {
+    return organization?.id || null;
+  }, [organization]);
+
+  // Check if role data is loaded
+  const roleLoaded = useMemo(() => {
+    return userLoaded && membershipsLoaded;
+  }, [userLoaded, membershipsLoaded]);
+
+  // Helper functions
+  const hasPermission = (permission: string): boolean => {
+    if (!user) return false;
+    
+    // If in organization context, check organization-specific permissions
+    if (currentRole && currentOrganization && organization) {
+      const orgRole = user.organizationRoles.find(
+        r => r.organizationId === currentOrganization && r.role === currentRole
+      );
+      return orgRole?.permissions.includes(permission) || false;
+    }
+    
+    // Otherwise check personal account permissions
+    return user.permissions.includes(permission);
+  };
 
   const login = (userData: User) => {
     // This is handled by Clerk, but we can set additional data if needed
-    setUserRoleState(userData.role);
+    console.log('Login called with:', userData);
   };
 
   const logout = () => {
     // This should be handled by Clerk's signOut
-    setUserRoleState(undefined);
+    console.log('Logout called - use Clerk signOut instead');
   };
-
 
   const getAuthToken = async (): Promise<string | null> => {
     if (!isSignedIn) return null;
@@ -124,12 +143,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Debug logging only when values actually change
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🐛 DEBUG - AuthContext state:', {
+        isSignedIn,
+        userLoaded,
+        membershipsLoaded,
+        roleLoaded,
+        userId: user?.id || null,
+        currentRole,
+        currentOrganization,
+        organizationCount: user?.organizationRoles.length || 0,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [isSignedIn, userLoaded, membershipsLoaded, roleLoaded, user?.id, currentRole, currentOrganization, user?.organizationRoles.length]);
+
   const value: AuthContextType = {
     user,
     isAuthenticated: isSignedIn || false,
     roleLoaded,
+    currentRole,
+    currentOrganization,
     login,
     logout,
+    hasPermission,
     getAuthToken,
   };
 

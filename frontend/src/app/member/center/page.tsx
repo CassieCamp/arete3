@@ -31,13 +31,10 @@ const scrollbarStyle = `
   }
   
   .ethereal-glow {
-    box-shadow:
-      0 0 20px rgba(255, 255, 255, 0.3),
-      0 0 40px rgba(255, 255, 255, 0.2),
-      0 0 60px rgba(255, 255, 255, 0.1),
-      0 8px 32px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-xl);
     transform: scale(1.02);
-    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+    background: hsl(var(--card));
+    border: 2px solid hsl(var(--primary) / 0.2);
   }
   
   .ethereal-glow::before {
@@ -48,9 +45,9 @@ const scrollbarStyle = `
     right: -2px;
     bottom: -2px;
     background: linear-gradient(45deg,
-      rgba(255, 255, 255, 0.1),
-      rgba(255, 255, 255, 0.3),
-      rgba(255, 255, 255, 0.1));
+      hsl(var(--primary) / 0.1),
+      hsl(var(--primary) / 0.3),
+      hsl(var(--primary) / 0.1));
     border-radius: 50%;
     z-index: -1;
     animation: ethereal-pulse 3s ease-in-out infinite;
@@ -232,19 +229,19 @@ export default function CenterPage() {
             {showLeftArrow && (
               <button
                 onClick={() => scrollTo('left')}
-                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-2 transition-all opacity-0 group-hover:opacity-100"
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-card/90 hover:bg-card shadow-lg rounded-full p-2 transition-all opacity-0 group-hover:opacity-100"
                 style={{ marginTop: '2rem' }}
               >
-                <ChevronLeft className="w-6 h-6 text-gray-600" />
+                <ChevronLeft className="w-6 h-6 text-muted-foreground" />
               </button>
             )}
             {showRightArrow && (
               <button
                 onClick={() => scrollTo('right')}
-                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-2 transition-all opacity-0 group-hover:opacity-100"
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-card/90 hover:bg-card shadow-lg rounded-full p-2 transition-all opacity-0 group-hover:opacity-100"
                 style={{ marginTop: '2rem' }}
               >
-                <ChevronRight className="w-6 h-6 text-gray-600" />
+                <ChevronRight className="w-6 h-6 text-muted-foreground" />
               </button>
             )}
           </div>
@@ -268,34 +265,34 @@ export default function CenterPage() {
               const isActive = index === activeCardIndex;
               
               const cardContent = (
-                <div className={`flex-shrink-0 w-80 h-80 rounded-full bg-white shadow-lg border border-gray-200 flex flex-col items-center justify-center p-8 transition-all duration-500 hover:shadow-xl hover:scale-105 cursor-pointer snap-center relative ${
+                <div className={`flex-shrink-0 w-80 h-80 rounded-full bg-card shadow-lg border border-border flex flex-col items-center justify-center p-8 transition-all duration-500 hover:shadow-xl hover:scale-105 cursor-pointer snap-center relative ${
                   isActive ? 'ethereal-glow' : ''
                 }`}>
                   <div className={`mb-6 p-4 rounded-full transition-all duration-300 ${
                     isActive ? 'bg-primary shadow-lg' : 'bg-primary'
                   }`}>
                     <IconComponent className={`w-12 h-12 transition-all duration-300 ${
-                      isActive ? 'text-white drop-shadow-sm' : 'text-slate-100'
+                      isActive ? 'text-primary-foreground drop-shadow-sm' : 'text-primary-foreground/80'
                     }`} />
                   </div>
                   <h3 className={`text-2xl font-semibold text-center mb-3 transition-all duration-300 ${
-                    isActive ? 'text-gray-800 drop-shadow-sm' : 'text-gray-700'
+                    isActive ? 'text-foreground drop-shadow-sm' : 'text-foreground/90'
                   }`}>{card.title}</h3>
                   <p className={`text-center mb-6 text-sm leading-relaxed transition-all duration-300 ${
-                    isActive ? 'text-gray-700' : 'text-gray-600'
+                    isActive ? 'text-muted-foreground' : 'text-muted-foreground/80'
                   }`}>
                     {card.description}
                   </p>
                   <div className="mt-auto">
                     {card.href ? (
                       <Button variant="outline" size="sm" className={`rounded-full transition-all duration-300 ${
-                        isActive ? 'shadow-md border-gray-300' : ''
+                        isActive ? 'shadow-md border-border' : ''
                       }`}>
                         Open
                       </Button>
                     ) : (
                       <Button variant="outline" size="sm" disabled className={`rounded-full transition-all duration-300 ${
-                        isActive ? 'shadow-md border-gray-300' : ''
+                        isActive ? 'shadow-md border-border' : ''
                       }`}>
                         Coming Soon
                       </Button>
@@ -327,7 +324,7 @@ export default function CenterPage() {
                 className={`w-3 h-3 rounded-full transition-all duration-200 hover:scale-110 ${
                   index === activeCardIndex
                     ? 'bg-primary shadow-md'
-                    : 'bg-gray-300 hover:bg-gray-400'
+                      : 'bg-muted hover:bg-muted/80'
                 }`}
                 aria-label={`Go to ${centerCards[index].title} card`}
               />
@@ -336,7 +333,7 @@ export default function CenterPage() {
 
           {/* Star Wars Quote */}
           <div className="mt-12 text-center">
-            <p className="text-lg italic text-slate-600 max-w-2xl mx-auto">
+            <p className="text-lg italic text-muted-foreground max-w-2xl mx-auto">
               "Luke Skywalker: What's in the cave?"
               <br />
               "Yoda: Only what you bring with you."

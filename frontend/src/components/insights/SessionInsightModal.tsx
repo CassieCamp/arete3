@@ -61,7 +61,7 @@ export function SessionInsightModal({
 
   const handleBackToJourney = () => {
     onClose()
-    router.push('/journey')
+    router.push('/member/journey')
   }
 
   const handleClose = () => {

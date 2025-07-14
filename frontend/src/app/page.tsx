@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useClerk, useUser, UserButton } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
@@ -14,10 +14,10 @@ import { AuthDropdown } from '@/components/auth/AuthDropdown';
 import { Check } from 'lucide-react';
 
 export default function HomePage() {
-  const { user } = useAuth();
   const router = useRouter();
   const { redirectToSignIn } = useClerk();
-  const { isSignedIn } = useUser();
+  const { user, isSignedIn } = useUser();
+  
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -89,26 +89,26 @@ export default function HomePage() {
     e.preventDefault();
     // Handle form submission - could integrate with backend API
     console.log('Form submitted:', formData);
-    // For now, redirect to waitlist success or show confirmation
+    // For now, show confirmation or redirect to appropriate page
   };
+
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="text-2xl font-bold font-serif text-foreground">
+          <Link href="/" className="text-2xl font-bold font-serif text-foreground hover:opacity-80 transition-opacity">
             Arete
-          </div>
+          </Link>
           <div className="flex gap-4 items-center">
             {isSignedIn ? (
               <>
-                <Button
-                  variant="ghost"
-                  onClick={() => router.push('/journey')}
-                >
-                  My Arete
-                </Button>
+                <Link href="/member/journey">
+                  <Button variant="ghost">
+                    My Arete
+                  </Button>
+                </Link>
                 <UserButton
                   appearance={{
                     elements: {
@@ -120,11 +120,11 @@ export default function HomePage() {
             ) : (
               <>
                 <AuthDropdown variant="ghost" />
-                <Button
-                  onClick={() => router.push('/waitlist')}
-                >
-                  Join Waitlist
-                </Button>
+                <Link href="/sign-up">
+                  <Button>
+                    Get Started
+                  </Button>
+                </Link>
               </>
             )}
           </div>
@@ -154,13 +154,14 @@ export default function HomePage() {
           </div>
 
           <div className="flex justify-center">
-            <Button
-              size="lg"
-              className="px-8 py-3 text-lg"
-              onClick={() => router.push('/waitlist')}
-            >
-              Join Waitlist
-            </Button>
+            <Link href="/sign-up">
+              <Button
+                size="lg"
+                className="px-8 py-3 text-lg"
+              >
+                Get Started
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -351,14 +352,15 @@ export default function HomePage() {
                     </p>
                   )}
 
-                  <Button
-                    variant={tier.ctaVariant}
-                    className="w-full mt-auto"
-                    size="lg"
-                    onClick={() => router.push('/waitlist')}
-                  >
-                    Join Waitlist
-                  </Button>
+                  <Link href="/sign-up" className="w-full">
+                    <Button
+                      variant={tier.ctaVariant}
+                      className="w-full mt-auto"
+                      size="lg"
+                    >
+                      {tier.cta}
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
             ))}
