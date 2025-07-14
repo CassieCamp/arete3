@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict, Any
 from bson import ObjectId
 from enum import Enum
 
@@ -36,6 +36,7 @@ class RelationshipStatus(str, Enum):
 
 
 class CoachingRelationship(BaseModel):
+    """Enhanced CoachingRelationship model with many-to-many support and organization context"""
     model_config = ConfigDict(
         populate_by_name=True,
         arbitrary_types_allowed=True,
@@ -43,21 +44,41 @@ class CoachingRelationship(BaseModel):
     )
     
     id: Optional[PyObjectId] = Field(default=None, alias="_id")
-    coach_user_id: str  # ID of the coach user
-    client_user_id: str  # ID of the client user
-    status: RelationshipStatus = RelationshipStatus.PENDING
     
-    # NEW: Pending relationship support
+    # Many-to-many relationship support
+    coach_id: str = Field(..., description="User ID of coach")
+    member_id: str = Field(..., description="User ID of member (formerly client)")
+    
+    # Legacy fields for backward compatibility
+    coach_user_id: Optional[str] = Field(default=None, description="Legacy coach user ID field")
+    client_user_id: Optional[str] = Field(default=None, description="Legacy client user ID field")
+    
+    # Organization context
+    coach_organization_id: Optional[str] = Field(default=None, description="Coach's organization ID")
+    member_organization_id: Optional[str] = Field(default=None, description="Member's organization ID")
+    
+    # Relationship metadata
+    status: RelationshipStatus = RelationshipStatus.PENDING
+    start_date: datetime = Field(default_factory=datetime.utcnow, description="Relationship start date")
+    end_date: Optional[datetime] = Field(default=None, description="Relationship end date")
+    
+    # Permissions and access
+    permissions: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Relationship-specific permissions and access controls"
+    )
+    
+    # Invitation and acceptance tracking
     invited_by_email: Optional[str] = None
     invitation_accepted_at: Optional[datetime] = None
     
-    # NEW: Freemium transition tracking
-    upgraded_from_freemium: bool = False  # Default false
+    # Freemium transition tracking
+    upgraded_from_freemium: bool = False
     upgrade_date: Optional[datetime] = None
     
     # Soft delete fields
     deleted_at: Optional[datetime] = None
-    deleted_by: Optional[str] = None  # User ID who deleted the relationship
+    deleted_by: Optional[str] = None
     deletion_reason: Optional[str] = None
     
     # Timestamps

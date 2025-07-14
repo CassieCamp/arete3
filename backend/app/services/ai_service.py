@@ -236,3 +236,172 @@ IMPORTANT GUIDELINES:
 
 Return only valid JSON matching the exact structure above.
 """
+
+    async def generate_document_metadata(
+        self,
+        filename: str,
+        content: str,
+        max_content_length: int = 2000
+    ) -> Dict[str, Any]:
+        """
+        Generate intelligent title and metadata for a document based on filename and content.
+        
+        Args:
+            filename: Original filename of the document
+            content: Extracted text content from the document
+            max_content_length: Maximum content length to analyze (default 2000 chars)
+            
+        Returns:
+            Dict containing title, category, description, and tags
+        """
+        try:
+            logger.info(f"=== AIService.generate_document_metadata called ===")
+            logger.info(f"filename: {filename}, content_length: {len(content)}")
+            
+            # Truncate content if too long
+            truncated_content = content[:max_content_length]
+            if len(content) > max_content_length:
+                truncated_content += "...[content truncated]"
+            
+            prompt = self._build_document_metadata_prompt(filename, truncated_content)
+            
+            # Call AI provider
+            if settings.ai_provider == "anthropic" and self.anthropic_client:
+                result = await self._call_anthropic_for_metadata(prompt)
+            elif settings.ai_provider == "openai" and self.openai_client:
+                result = await self._call_openai_for_metadata(prompt)
+            else:
+                # Fallback to basic title generation
+                return self._generate_fallback_metadata(filename, content)
+            
+            logger.info(f"✅ Successfully generated document metadata")
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ Error generating document metadata: {e}")
+            # Return fallback metadata on error
+            return self._generate_fallback_metadata(filename, content)
+
+    def _build_document_metadata_prompt(self, filename: str, content: str) -> str:
+        """Build prompt for document metadata generation"""
+        
+        return f"""
+Analyze this document and generate intelligent metadata based on both the filename and content.
+
+FILENAME: {filename}
+
+DOCUMENT CONTENT:
+{content}
+
+Generate metadata in JSON format:
+
+{{
+  "title": "Descriptive title that captures the document's purpose and content (max 80 characters)",
+  "category": "One of: performance_review, coaching_session, assessment, development_plan, feedback, meeting_notes, report, presentation, other",
+  "description": "Brief description of the document's content and purpose (max 200 characters)",
+  "tags": ["3-5 relevant tags based on content"],
+  "document_type": "Specific type like 'Performance Review', 'Coaching Notes', '360 Assessment', etc.",
+  "confidence": 0.85
+}}
+
+GUIDELINES:
+- Create a title that's more descriptive than the filename
+- Choose the most appropriate category based on content
+- Include relevant tags that would help with searching/filtering
+- Be specific about document type
+- If content suggests coaching/development context, reflect that in metadata
+- Confidence should reflect how certain you are about the categorization (0.0-1.0)
+
+Examples:
+- "Q2 Performance Review.pdf" with performance content → "Q2 Performance Review - Leadership Development Focus"
+- "coaching-session-notes.docx" with session content → "Coaching Session - Goal Setting and Accountability"
+- "360-feedback-report.pdf" with feedback content → "360-Degree Feedback Assessment - Communication Skills"
+
+Return only valid JSON matching the exact structure above.
+"""
+
+    async def _call_anthropic_for_metadata(self, prompt: str) -> Dict[str, Any]:
+        """Call Anthropic API for document metadata generation"""
+        try:
+            response = await self.anthropic_client.messages.create(
+                model=settings.ai_model,
+                max_tokens=300,
+                temperature=0.3,  # Lower temperature for more consistent metadata
+                messages=[{"role": "user", "content": prompt}]
+            )
+            
+            content = response.content[0].text
+            return json.loads(content)
+            
+        except Exception as e:
+            logger.error(f"Anthropic API error in metadata generation: {e}")
+            raise
+
+    async def _call_openai_for_metadata(self, prompt: str) -> Dict[str, Any]:
+        """Call OpenAI API for document metadata generation"""
+        try:
+            response = await self.openai_client.chat.completions.create(
+                model=settings.ai_model,
+                messages=[
+                    {"role": "system", "content": "You are an expert document analyst specializing in generating intelligent metadata for coaching and development documents."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=300,
+                temperature=0.3,  # Lower temperature for more consistent metadata
+                timeout=settings.ai_timeout_seconds
+            )
+            
+            content = response.choices[0].message.content
+            return json.loads(content)
+            
+        except Exception as e:
+            logger.error(f"OpenAI API error in metadata generation: {e}")
+            raise
+
+    def _generate_fallback_metadata(self, filename: str, content: str) -> Dict[str, Any]:
+        """Generate basic fallback metadata when AI fails"""
+        
+        # Extract base name without extension
+        base_name = filename.rsplit('.', 1)[0] if '.' in filename else filename
+        
+        # Simple category detection based on filename
+        filename_lower = filename.lower()
+        if any(word in filename_lower for word in ['performance', 'review', 'evaluation']):
+            category = "performance_review"
+            doc_type = "Performance Review"
+        elif any(word in filename_lower for word in ['coaching', 'session', 'notes']):
+            category = "coaching_session"
+            doc_type = "Coaching Session"
+        elif any(word in filename_lower for word in ['360', 'feedback', 'assessment']):
+            category = "assessment"
+            doc_type = "Assessment"
+        elif any(word in filename_lower for word in ['meeting', 'notes']):
+            category = "meeting_notes"
+            doc_type = "Meeting Notes"
+        else:
+            category = "other"
+            doc_type = "Document"
+        
+        # Generate basic tags
+        tags = []
+        if 'performance' in filename_lower:
+            tags.append('performance')
+        if 'coaching' in filename_lower:
+            tags.append('coaching')
+        if 'development' in filename_lower:
+            tags.append('development')
+        if 'feedback' in filename_lower:
+            tags.append('feedback')
+        
+        # Ensure we have at least some tags
+        if not tags:
+            tags = ['document', 'uploaded']
+        
+        return {
+            "title": f"{doc_type} - {base_name}",
+            "category": category,
+            "description": f"Uploaded {doc_type.lower()} document",
+            "tags": tags[:5],  # Limit to 5 tags
+            "document_type": doc_type,
+            "confidence": 0.5  # Lower confidence for fallback
+        }

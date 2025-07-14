@@ -186,28 +186,65 @@ class ClerkOrganizationService:
     async def get_user_organizations(self, user_id: str) -> List[Dict[str, Any]]:
         """Get all organizations for a user"""
         try:
+            logger.info(f"🔍 DEBUG - get_user_organizations called for user_id: {user_id}")
+            
             async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"{self.base_url}/users/{user_id}/organization_memberships",
-                    headers=self.headers
-                )
+                url = f"{self.base_url}/users/{user_id}/organization_memberships"
+                logger.info(f"🔍 DEBUG - Making request to: {url}")
+                
+                response = await client.get(url, headers=self.headers)
+                
+                logger.info(f"🔍 DEBUG - Response status: {response.status_code}")
+                logger.info(f"🔍 DEBUG - Response text: {response.text}")
                 
                 if response.status_code != 200:
                     logger.error(f"Failed to get user organizations: {response.text}")
                     raise Exception(f"Failed to get user organizations: {response.status_code}")
                 
-                memberships = response.json()
+                response_data = response.json()
+                logger.info(f"🔍 DEBUG - Raw response data: {response_data}")
+                
+                # Handle Clerk API response format: {"data": [...], "total_count": N}
+                if isinstance(response_data, dict) and "data" in response_data:
+                    memberships = response_data["data"]
+                elif isinstance(response_data, list):
+                    memberships = response_data
+                else:
+                    logger.warning(f"Unexpected response format from Clerk API: {type(response_data)}")
+                    return []
+                
                 organizations = []
                 
                 for membership in memberships:
-                    org = membership.get("organization", {})
-                    organizations.append({
-                        "id": org.get("id"),
-                        "name": org.get("name"),
-                        "role": membership.get("role"),
-                        "metadata": org.get("private_metadata", {})
-                    })
+                    try:
+                        # Handle dict-based membership (which is what Clerk returns)
+                        if isinstance(membership, dict):
+                            org = membership.get("organization")
+                            
+                            if isinstance(org, dict):
+                                # Clean up role format (remove "org:" prefix if present)
+                                raw_role = membership.get("role", "member")
+                                clean_role = raw_role.replace("org:", "") if raw_role else "member"
+                                
+                                logger.info(f"🔍 DEBUG - Processing organization: {org.get('name')}, role: {raw_role} -> {clean_role}")
+                                
+                                organizations.append({
+                                    "id": org.get("id"),
+                                    "name": org.get("name"),
+                                    "role": clean_role,
+                                    "metadata": org.get("private_metadata", {})
+                                })
+                            else:
+                                logger.warning(f"Unexpected organization format in membership: {type(org)}")
+                        else:
+                            logger.warning(f"Unexpected membership type: {type(membership)}")
+                                
+                    except Exception as e:
+                        logger.error(f"Error processing membership: {e}")
+                        # Continue processing other memberships
+                        continue
                 
+                logger.info(f"🔍 DEBUG - Final organizations list: {organizations}")
                 return organizations
                 
         except Exception as e:
@@ -245,4 +282,155 @@ class ClerkOrganizationService:
                 
         except Exception as e:
             logger.error(f"Error getting organization members: {str(e)}")
+            raise
+    
+    async def add_user_to_organization(self, org_id: str, user_id: str, role: str = "basic_member") -> Dict[str, Any]:
+        """Add a user to an organization with specified role"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}/organization_memberships",
+                    headers=self.headers,
+                    json={
+                        "organization_id": org_id,
+                        "user_id": user_id,
+                        "role": role
+                    }
+                )
+                
+                if response.status_code != 200:
+                    logger.error(f"Failed to add user to organization: {response.text}")
+                    raise Exception(f"Failed to add user to organization: {response.status_code}")
+                
+                membership = response.json()
+                return {
+                    "membership_id": membership.get("id"),
+                    "organization_id": org_id,
+                    "user_id": user_id,
+                    "role": role,
+                    "created_at": membership.get("created_at")
+                }
+                
+        except Exception as e:
+            logger.error(f"Error adding user to organization: {str(e)}")
+            raise
+    
+    async def update_user_organization_role(self, membership_id: str, role: str) -> Dict[str, Any]:
+        """Update a user's role in an organization"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.patch(
+                    f"{self.base_url}/organization_memberships/{membership_id}",
+                    headers=self.headers,
+                    json={"role": role}
+                )
+                
+                if response.status_code != 200:
+                    logger.error(f"Failed to update user role: {response.text}")
+                    raise Exception(f"Failed to update user role: {response.status_code}")
+                
+                return response.json()
+                
+        except Exception as e:
+            logger.error(f"Error updating user organization role: {str(e)}")
+            raise
+    
+    async def remove_user_from_organization(self, membership_id: str) -> bool:
+        """Remove a user from an organization"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.delete(
+                    f"{self.base_url}/organization_memberships/{membership_id}",
+                    headers=self.headers
+                )
+                
+                if response.status_code not in [200, 204]:
+                    logger.error(f"Failed to remove user from organization: {response.text}")
+                    raise Exception(f"Failed to remove user from organization: {response.status_code}")
+                
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error removing user from organization: {str(e)}")
+            raise
+    
+    async def get_user_roles_in_organizations(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get all roles a user has across organizations"""
+        try:
+            organizations = await self.get_user_organizations(user_id)
+            
+            roles_info = []
+            for org in organizations:
+                org_details = await self.get_organization_with_metadata(org["id"])
+                if org_details:
+                    org_type = org_details.get("metadata", {}).get("organization_type", "unknown")
+                    
+                    roles_info.append({
+                        "organization_id": org["id"],
+                        "organization_name": org["name"],
+                        "role": org["role"],
+                        "org_type": org_type,
+                        "metadata": org_details.get("metadata", {})
+                    })
+            
+            return roles_info
+            
+        except Exception as e:
+            logger.error(f"Error getting user roles in organizations: {str(e)}")
+            raise
+    
+    async def get_user_permissions(self, user_id: str) -> List[str]:
+        """Get all permissions for a user based on their organization roles"""
+        try:
+            roles_info = await self.get_user_roles_in_organizations(user_id)
+            
+            permissions = set()
+            
+            for role_info in roles_info:
+                role = role_info["role"]
+                org_type = role_info["org_type"]
+                
+                # Add permissions based on role and organization type
+                if role == "admin":
+                    if org_type == "coach_practice":
+                        permissions.update([
+                            "coaching_relationships:manage",
+                            "client_data:read",
+                            "resources:create",
+                            "clients:invite",
+                            "org_members:manage",
+                            "org_settings:manage"
+                        ])
+                    elif org_type == "client_company":
+                        permissions.update([
+                            "org_members:manage",
+                            "org_settings:manage",
+                            "coaches:connect"
+                        ])
+                    else:  # Arete organization admin
+                        permissions.update([
+                            "platform:manage",
+                            "users:manage",
+                            "organizations:manage"
+                        ])
+                
+                elif role == "coach":
+                    permissions.update([
+                        "coaching_relationships:manage",
+                        "client_data:read",
+                        "resources:create",
+                        "clients:invite"
+                    ])
+                
+                elif role == "basic_member" or role == "member":
+                    permissions.update([
+                        "profile:manage",
+                        "goals:manage",
+                        "progress:read"
+                    ])
+            
+            return list(permissions)
+            
+        except Exception as e:
+            logger.error(f"Error getting user permissions: {str(e)}")
             raise

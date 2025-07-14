@@ -16,6 +16,26 @@ class CoachingRelationshipRepository:
     def __init__(self):
         self.collection_name = "coaching_relationships"
         self.audit_repository = AuditRepository()
+    
+    def _ensure_field_compatibility(self, doc: dict) -> None:
+        """Ensure backward compatibility between legacy and new field names"""
+        # Map legacy fields to new fields if new fields don't exist
+        if "coach_id" not in doc and "coach_user_id" in doc:
+            doc["coach_id"] = doc["coach_user_id"]
+        if "member_id" not in doc and "client_user_id" in doc:
+            doc["member_id"] = doc["client_user_id"]
+        
+        # Ensure legacy fields exist for backward compatibility
+        if "coach_user_id" not in doc and "coach_id" in doc:
+            doc["coach_user_id"] = doc["coach_id"]
+        if "client_user_id" not in doc and "member_id" in doc:
+            doc["client_user_id"] = doc["member_id"]
+        
+        # Set default values for new fields if they don't exist
+        if "permissions" not in doc:
+            doc["permissions"] = {}
+        if "start_date" not in doc and "created_at" in doc:
+            doc["start_date"] = doc["created_at"]
 
     async def create_relationship(self, relationship: CoachingRelationship) -> CoachingRelationship:
         """Create a new coaching relationship (connection request)"""
@@ -172,7 +192,7 @@ class CoachingRelationshipRepository:
             raise
 
     async def get_active_relationships_for_user(self, user_id: str) -> List[CoachingRelationship]:
-        """Get all active coaching relationships for a user (as coach or client)"""
+        """Get all active coaching relationships for a user (as coach or member)"""
         logger.info(f"=== CoachingRelationshipRepository.get_active_relationships_for_user called ===")
         logger.info(f"Searching for active relationships for user_id: {user_id}")
         
@@ -182,13 +202,16 @@ class CoachingRelationshipRepository:
                 logger.error("Database is None")
                 raise Exception("Database connection is None")
             
-            # Find relationships where user is either coach or client and status is active
+            # Find relationships where user is either coach or member and status is active
+            # Support both new and legacy field names
             query = {
                 "$and": [
                     {"status": RelationshipStatus.ACTIVE.value},
                     {"$or": [
-                        {"coach_user_id": user_id},
-                        {"client_user_id": user_id}
+                        {"coach_id": user_id},  # New field
+                        {"member_id": user_id},  # New field
+                        {"coach_user_id": user_id},  # Legacy field
+                        {"client_user_id": user_id}  # Legacy field
                     ]}
                 ]
             }
@@ -205,6 +228,10 @@ class CoachingRelationshipRepository:
                 # Convert ObjectId to string for Pydantic compatibility
                 if "_id" in doc and doc["_id"]:
                     doc["_id"] = str(doc["_id"])
+                
+                # Handle backward compatibility for legacy fields
+                self._ensure_field_compatibility(doc)
+                
                 relationships.append(CoachingRelationship(**doc))
             
             logger.info(f"✅ Successfully retrieved {len(relationships)} active relationships")

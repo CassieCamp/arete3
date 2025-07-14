@@ -6,7 +6,7 @@ from app.repositories.coaching_relationship_repository import CoachingRelationsh
 from app.repositories.user_repository import UserRepository
 from app.repositories.profile_repository import ProfileRepository
 from app.repositories.entry_repository import EntryRepository
-from app.api.v1.deps import get_current_user
+from app.api.v1.deps import org_required
 from app.models.user import User
 from pydantic import BaseModel
 from datetime import datetime
@@ -60,21 +60,15 @@ class CoachDashboardResponse(BaseModel):
     pending_clients: int
 
 @router.get("/clients", response_model=CoachDashboardResponse)
-async def get_coach_clients(current_user: User = Depends(get_current_user)):
+async def get_coach_clients(user_info: dict = Depends(org_required)):
     """Get coach's client list with stats"""
     try:
-        logger.info(f"Getting clients for coach: {current_user.clerk_user_id}")
-        
-        # Verify user is a coach
-        if not hasattr(current_user, 'role') or current_user.role != 'coach':
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only coaches can access client data"
-            )
+        clerk_user_id = user_info['clerk_user_id']
+        logger.info(f"Getting clients for coach: {clerk_user_id}")
         
         # Get coaching relationships
         coaching_repo = CoachingRelationshipRepository()
-        relationships = await coaching_repo.get_relationships_for_coach(current_user.clerk_user_id)
+        relationships = await coaching_repo.get_relationships_for_coach(clerk_user_id)
         
         # Get user and profile repositories
         user_repo = UserRepository()
@@ -130,22 +124,16 @@ async def get_coach_resources(
     category: Optional[str] = None,
     resource_type: Optional[str] = None,
     is_template: Optional[bool] = None,
-    current_user: User = Depends(get_current_user)
+    user_info: dict = Depends(org_required)
 ):
     """Get coach's resources with optional filters"""
     try:
-        logger.info(f"Getting resources for coach: {current_user.clerk_user_id}")
-        
-        # Verify user is a coach
-        if not hasattr(current_user, 'role') or current_user.role != 'coach':
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only coaches can access resource data"
-            )
+        clerk_user_id = user_info['clerk_user_id']
+        logger.info(f"Getting resources for coach: {clerk_user_id}")
         
         coach_resource_repo = CoachResourceRepository()
         resources = await coach_resource_repo.get_resources_by_coach(
-            current_user.clerk_user_id,
+            clerk_user_id,
             category=category,
             resource_type=resource_type,
             is_template=is_template
@@ -163,22 +151,16 @@ async def get_coach_resources(
 @router.post("/resources")
 async def create_coach_resource(
     resource_data: CoachResourceCreate,
-    current_user: User = Depends(get_current_user)
+    user_info: dict = Depends(org_required)
 ):
     """Create a new coach resource"""
     try:
-        logger.info(f"Creating resource for coach: {current_user.clerk_user_id}")
-        
-        # Verify user is a coach
-        if not hasattr(current_user, 'role') or current_user.role != 'coach':
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only coaches can create resources"
-            )
+        clerk_user_id = user_info['clerk_user_id']
+        logger.info(f"Creating resource for coach: {clerk_user_id}")
         
         # Create resource model
         resource = CoachResource(
-            coach_user_id=current_user.clerk_user_id,
+            coach_user_id=clerk_user_id,
             **resource_data.model_dump()
         )
         
@@ -198,24 +180,18 @@ async def create_coach_resource(
 async def update_coach_resource(
     resource_id: str,
     resource_data: CoachResourceUpdate,
-    current_user: User = Depends(get_current_user)
+    user_info: dict = Depends(org_required)
 ):
     """Update a coach resource"""
     try:
-        logger.info(f"Updating resource {resource_id} for coach: {current_user.clerk_user_id}")
-        
-        # Verify user is a coach
-        if not hasattr(current_user, 'role') or current_user.role != 'coach':
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only coaches can update resources"
-            )
+        clerk_user_id = user_info['clerk_user_id']
+        logger.info(f"Updating resource {resource_id} for coach: {clerk_user_id}")
         
         coach_resource_repo = CoachResourceRepository()
         
         # Verify resource belongs to coach
         existing_resource = await coach_resource_repo.get_resource_by_id(resource_id)
-        if not existing_resource or existing_resource.coach_user_id != current_user.clerk_user_id:
+        if not existing_resource or existing_resource.coach_user_id != clerk_user_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Resource not found"
@@ -245,24 +221,18 @@ async def update_coach_resource(
 @router.delete("/resources/{resource_id}")
 async def delete_coach_resource(
     resource_id: str,
-    current_user: User = Depends(get_current_user)
+    user_info: dict = Depends(org_required)
 ):
     """Delete a coach resource"""
     try:
-        logger.info(f"Deleting resource {resource_id} for coach: {current_user.clerk_user_id}")
-        
-        # Verify user is a coach
-        if not hasattr(current_user, 'role') or current_user.role != 'coach':
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only coaches can delete resources"
-            )
+        clerk_user_id = user_info['clerk_user_id']
+        logger.info(f"Deleting resource {resource_id} for coach: {clerk_user_id}")
         
         coach_resource_repo = CoachResourceRepository()
         
         # Verify resource belongs to coach
         existing_resource = await coach_resource_repo.get_resource_by_id(resource_id)
-        if not existing_resource or existing_resource.coach_user_id != current_user.clerk_user_id:
+        if not existing_resource or existing_resource.coach_user_id != clerk_user_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Resource not found"
@@ -291,23 +261,17 @@ async def delete_coach_resource(
 @router.get("/clients/{client_id}/notes")
 async def get_client_notes(
     client_id: str,
-    current_user: User = Depends(get_current_user)
+    user_info: dict = Depends(org_required)
 ):
     """Get coach's notes for specific client"""
     try:
-        logger.info(f"Getting notes for client {client_id} by coach: {current_user.clerk_user_id}")
-        
-        # Verify user is a coach
-        if not hasattr(current_user, 'role') or current_user.role != 'coach':
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only coaches can access client notes"
-            )
+        clerk_user_id = user_info['clerk_user_id']
+        logger.info(f"Getting notes for client {client_id} by coach: {clerk_user_id}")
         
         # Verify coaching relationship exists
         coaching_repo = CoachingRelationshipRepository()
         relationship = await coaching_repo.get_relationship_between_users(
-            current_user.clerk_user_id, client_id
+            clerk_user_id, client_id
         )
         if not relationship:
             raise HTTPException(
@@ -316,7 +280,7 @@ async def get_client_notes(
             )
         
         coach_resource_repo = CoachResourceRepository()
-        notes = await coach_resource_repo.get_client_note(current_user.clerk_user_id, client_id)
+        notes = await coach_resource_repo.get_client_note(clerk_user_id, client_id)
         
         return {"notes": notes}
         
@@ -333,23 +297,17 @@ async def get_client_notes(
 async def update_client_notes(
     client_id: str,
     notes_data: ClientNotesUpdate,
-    current_user: User = Depends(get_current_user)
+    user_info: dict = Depends(org_required)
 ):
     """Update coach's notes for specific client"""
     try:
-        logger.info(f"Updating notes for client {client_id} by coach: {current_user.clerk_user_id}")
-        
-        # Verify user is a coach
-        if not hasattr(current_user, 'role') or current_user.role != 'coach':
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only coaches can update client notes"
-            )
+        clerk_user_id = user_info['clerk_user_id']
+        logger.info(f"Updating notes for client {client_id} by coach: {clerk_user_id}")
         
         # Verify coaching relationship exists
         coaching_repo = CoachingRelationshipRepository()
         relationship = await coaching_repo.get_relationship_between_users(
-            current_user.clerk_user_id, client_id
+            clerk_user_id, client_id
         )
         if not relationship:
             raise HTTPException(
@@ -360,18 +318,18 @@ async def update_client_notes(
         coach_resource_repo = CoachResourceRepository()
         
         # Check if notes exist, create or update accordingly
-        existing_notes = await coach_resource_repo.get_client_note(current_user.clerk_user_id, client_id)
+        existing_notes = await coach_resource_repo.get_client_note(clerk_user_id, client_id)
         
         if existing_notes:
             # Update existing notes
             update_data = {k: v for k, v in notes_data.model_dump().items() if v is not None}
             updated_notes = await coach_resource_repo.update_client_note(
-                current_user.clerk_user_id, client_id, update_data
+                clerk_user_id, client_id, update_data
             )
         else:
             # Create new notes
             new_notes = CoachClientNote(
-                coach_user_id=current_user.clerk_user_id,
+                coach_user_id=clerk_user_id,
                 client_user_id=client_id,
                 **notes_data.model_dump()
             )
@@ -391,23 +349,17 @@ async def update_client_notes(
 @router.get("/clients/{client_id}/insights")
 async def get_client_insights(
     client_id: str,
-    current_user: User = Depends(get_current_user)
+    user_info: dict = Depends(org_required)
 ):
     """Get client insights for coach view (read-only)"""
     try:
-        logger.info(f"Getting insights for client {client_id} by coach: {current_user.clerk_user_id}")
-        
-        # Verify user is a coach
-        if not hasattr(current_user, 'role') or current_user.role != 'coach':
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only coaches can access client insights"
-            )
+        clerk_user_id = user_info['clerk_user_id']
+        logger.info(f"Getting insights for client {client_id} by coach: {clerk_user_id}")
         
         # Verify coaching relationship exists
         coaching_repo = CoachingRelationshipRepository()
         relationship = await coaching_repo.get_relationship_between_users(
-            current_user.clerk_user_id, client_id
+            clerk_user_id, client_id
         )
         if not relationship or relationship.status != 'active':
             raise HTTPException(
@@ -443,23 +395,17 @@ async def get_client_insights(
 @router.get("/clients/{client_id}/resources")
 async def get_client_resources(
     client_id: str,
-    current_user: User = Depends(get_current_user)
+    user_info: dict = Depends(org_required)
 ):
     """Get resources assigned to a specific client"""
     try:
-        logger.info(f"Getting resources for client {client_id} by coach: {current_user.clerk_user_id}")
-        
-        # Verify user is a coach
-        if not hasattr(current_user, 'role') or current_user.role != 'coach':
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only coaches can access client resources"
-            )
+        clerk_user_id = user_info['clerk_user_id']
+        logger.info(f"Getting resources for client {client_id} by coach: {clerk_user_id}")
         
         # Verify coaching relationship exists
         coaching_repo = CoachingRelationshipRepository()
         relationship = await coaching_repo.get_relationship_between_users(
-            current_user.clerk_user_id, client_id
+            clerk_user_id, client_id
         )
         if not relationship:
             raise HTTPException(
@@ -469,7 +415,7 @@ async def get_client_resources(
         
         coach_resource_repo = CoachResourceRepository()
         resources = await coach_resource_repo.get_client_specific_resources(
-            current_user.clerk_user_id, client_id
+            clerk_user_id, client_id
         )
         
         return {"resources": resources}

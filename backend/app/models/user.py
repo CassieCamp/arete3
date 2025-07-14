@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
-from typing import Optional, Annotated
+from typing import Optional, List, Dict, Any
 from bson import ObjectId
 
 
@@ -25,6 +25,7 @@ class PyObjectId(ObjectId):
 
 
 class User(BaseModel):
+    """User model aligned with standardized Clerk role architecture"""
     model_config = ConfigDict(
         populate_by_name=True,
         arbitrary_types_allowed=True,
@@ -34,5 +35,15 @@ class User(BaseModel):
     id: Optional[PyObjectId] = Field(default=None, alias="_id")
     clerk_user_id: str
     email: str
-    role: str  # "coach" or "client"
+    
+    # Standardized role system from Clerk publicMetadata
+    primary_role: str = Field(default="member", description="Primary role: admin, coach, or member")
+    organization_roles: Optional[Dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Organization-specific roles and permissions from Clerk publicMetadata"
+    )
+    # Format: {"org_123": {"role": "admin", "permissions": ["manage_members", "view_analytics"]}}
+    
+    # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)

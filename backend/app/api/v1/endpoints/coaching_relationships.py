@@ -9,7 +9,7 @@ from app.schemas.coaching_relationship import (
 from app.services.coaching_relationship_service import CoachingRelationshipService
 from app.repositories.coaching_relationship_repository import CoachingRelationshipRepository
 from app.repositories.user_repository import UserRepository
-from app.api.v1.deps import get_current_user_clerk_id
+from app.api.v1.deps import org_required
 from app.models.coaching_relationship import RelationshipStatus
 import logging
 
@@ -46,12 +46,13 @@ async def convert_relationship_to_response(relationship, user_repository: UserRe
 @router.post("/", response_model=CoachingRelationshipResponse)
 async def create_connection_request(
     request: ConnectionRequestCreate,
-    current_user_id: str = Depends(get_current_user_clerk_id),
+    user_info: dict = Depends(org_required),
     service: CoachingRelationshipService = Depends(get_coaching_relationship_service)
 ):
     """
     Create a new connection request (coach-initiated only)
     """
+    current_user_id = user_info['clerk_user_id']
     logger.info(f"Creating connection request from coach {current_user_id} to client {request.client_email}")
     
     try:
@@ -81,12 +82,13 @@ async def create_connection_request(
 async def respond_to_connection_request(
     relationship_id: str,
     response: ConnectionRequestResponse,
-    current_user_id: str = Depends(get_current_user_clerk_id),
+    user_info: dict = Depends(org_required),
     service: CoachingRelationshipService = Depends(get_coaching_relationship_service)
 ):
     """
     Respond to a connection request (client can accept or decline coach's invitation)
     """
+    current_user_id = user_info['clerk_user_id']
     logger.info(f"Client {current_user_id} responding to relationship {relationship_id} with status {response.status}")
     
     try:
@@ -115,12 +117,13 @@ async def respond_to_connection_request(
 
 @router.get("/", response_model=UserRelationshipsResponse)
 async def get_user_relationships(
-    current_user_id: str = Depends(get_current_user_clerk_id),
+    user_info: dict = Depends(org_required),
     service: CoachingRelationshipService = Depends(get_coaching_relationship_service)
 ):
     """
     Get all connection requests and relationships for the current user
     """
+    current_user_id = user_info['clerk_user_id']
     logger.info(f"Getting relationships for user {current_user_id}")
     
     try:

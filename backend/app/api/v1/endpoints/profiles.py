@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from app.api.v1.deps import get_current_user_clerk_id
+from app.api.v1.deps import org_optional
 from app.services.profile_service import ProfileService
 from app.services.clerk_organization_service import ClerkOrganizationService
 from app.schemas.profile import (
@@ -19,10 +19,11 @@ router = APIRouter()
 @router.post("/coach", response_model=ProfileResponse)
 async def create_coach_profile(
     profile_data: CoachProfileCreateRequest,
-    clerk_user_id: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Create coach profile and automatically set up their Clerk organization"""
     try:
+        clerk_user_id = user_info['clerk_user_id']
         profile_service = ProfileService()
         org_service = ClerkOrganizationService()
         
@@ -85,10 +86,11 @@ async def create_coach_profile(
 @router.post("/client", response_model=ProfileResponse)
 async def create_client_profile(
     profile_data: ClientProfileCreateRequest,
-    clerk_user_id: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Create client profile and set up their Clerk organization"""
     try:
+        clerk_user_id = user_info['clerk_user_id']
         profile_service = ProfileService()
         org_service = ClerkOrganizationService()
         
@@ -151,10 +153,11 @@ async def create_client_profile(
 
 @router.get("/me", response_model=ProfileResponse)
 async def get_current_user_profile(
-    clerk_user_id: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Get current user's profile with organization details"""
     try:
+        clerk_user_id = user_info['clerk_user_id']
         profile_service = ProfileService()
         org_service = ClerkOrganizationService()
         

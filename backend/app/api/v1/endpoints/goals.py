@@ -6,7 +6,7 @@ from app.schemas.goal import (
     SuccessVisionSuggestionResponse, ProgressEntryResponse
 )
 from app.services.goal_service import GoalService
-from app.api.v1.deps import get_current_user_clerk_id
+from app.api.v1.deps import org_optional
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,9 +17,10 @@ router = APIRouter()
 @router.post("/", response_model=GoalResponse, status_code=status.HTTP_201_CREATED)
 async def create_goal(
     goal_data: GoalCreateRequest,
-    current_user: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Create a new goal with human-centered structure"""
+    current_user = user_info['clerk_user_id']
     logger.info(f"=== POST /goals called ===")
     logger.info(f"Creating goal for user: {current_user}")
     
@@ -61,9 +62,10 @@ async def create_goal(
 
 @router.get("/", response_model=List[GoalResponse])
 async def get_user_goals(
-    current_user: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Get all goals for the current user"""
+    current_user = user_info['clerk_user_id']
     logger.info(f"=== GET /goals called ===")
     logger.info(f"Getting goals for user: {current_user}")
     
@@ -107,9 +109,10 @@ async def get_user_goals(
 @router.get("/{goal_id}", response_model=GoalResponse)
 async def get_goal(
     goal_id: str,
-    current_user: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Get a specific goal by ID"""
+    current_user = user_info['clerk_user_id']
     logger.info(f"=== GET /goals/{goal_id} called ===")
     
     try:
@@ -159,9 +162,10 @@ async def get_goal(
 async def update_goal(
     goal_id: str,
     goal_data: GoalUpdateRequest,
-    current_user: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Update a goal"""
+    current_user = user_info['clerk_user_id']
     logger.info(f"=== PUT /goals/{goal_id} called ===")
     
     try:
@@ -215,9 +219,10 @@ async def update_goal(
 async def update_progress(
     goal_id: str,
     progress_data: ProgressUpdateRequest,
-    current_user: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Update goal progress with emoji and notes"""
+    current_user = user_info['clerk_user_id']
     logger.info(f"=== POST /goals/{goal_id}/progress called ===")
     
     try:
@@ -269,9 +274,10 @@ async def update_progress(
 @router.get("/{goal_id}/progress", response_model=List[ProgressEntryResponse])
 async def get_progress_timeline(
     goal_id: str,
-    current_user: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Get progress timeline for a goal"""
+    current_user = user_info['clerk_user_id']
     logger.info(f"=== GET /goals/{goal_id}/progress called ===")
     
     try:
@@ -298,9 +304,10 @@ async def get_progress_timeline(
 @router.delete("/{goal_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_goal(
     goal_id: str,
-    current_user: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Delete a goal"""
+    current_user = user_info['clerk_user_id']
     logger.info(f"=== DELETE /goals/{goal_id} called ===")
     
     try:
@@ -327,9 +334,10 @@ async def delete_goal(
 @router.post("/suggestions", response_model=List[GoalSuggestionResponse])
 async def get_goal_suggestions(
     document_ids: List[str],
-    current_user: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Get AI-powered goal suggestions based on documents"""
+    current_user = user_info['clerk_user_id']
     logger.info(f"=== POST /goals/suggestions called ===")
     
     try:
@@ -356,9 +364,10 @@ async def get_goal_suggestions(
 @router.post("/success-vision-suggestions", response_model=SuccessVisionSuggestionResponse)
 async def get_success_vision_suggestions(
     goal_statement: str,
-    current_user: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Get success vision suggestions for a goal statement"""
+    current_user = user_info['clerk_user_id']
     logger.info(f"=== POST /goals/success-vision-suggestions called ===")
     
     try:

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from app.api.v1.deps import get_current_user_clerk_id
+from app.api.v1.deps import org_optional
 from app.services.profile_service import ProfileService
 from app.schemas.profile import ProfileResponse, ProfileCreateRequest, ProfileUpdateRequest
 from app.core.config import settings
@@ -10,11 +10,12 @@ router = APIRouter()
 
 @router.get("/me")
 async def get_current_user(
-    clerk_user_id: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Get current user's basic information"""
     from app.services.user_service import UserService
     
+    clerk_user_id = user_info['clerk_user_id']
     user_service = UserService()
     user = await user_service.get_user_by_clerk_id(clerk_user_id)
     
@@ -35,9 +36,10 @@ async def get_current_user(
 
 @router.get("/me/profile", response_model=ProfileResponse)
 async def get_user_profile(
-    clerk_user_id: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Get current user's profile"""
+    clerk_user_id = user_info['clerk_user_id']
     profile_service = ProfileService()
     
     profile = await profile_service.get_profile_by_clerk_id(clerk_user_id)
@@ -62,9 +64,10 @@ async def get_user_profile(
 @router.put("/me/profile", response_model=ProfileResponse)
 async def update_user_profile(
     profile_data: ProfileUpdateRequest,
-    clerk_user_id: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Update current user's profile"""
+    clerk_user_id = user_info['clerk_user_id']
     profile_service = ProfileService()
     
     # Convert to dict, excluding None values
@@ -92,9 +95,10 @@ async def update_user_profile(
 @router.post("/me/profile", response_model=ProfileResponse)
 async def create_user_profile(
     profile_data: ProfileCreateRequest,
-    clerk_user_id: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Create current user's profile"""
+    clerk_user_id = user_info['clerk_user_id']
     profile_service = ProfileService()
     
     # Check if profile already exists
@@ -124,7 +128,7 @@ async def create_user_profile(
 
 @router.get("/access/check-coach-authorization")
 async def check_coach_authorization(
-    clerk_user_id: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Check if current user is authorized to be a coach"""
     from app.services.user_service import UserService
@@ -132,6 +136,7 @@ async def check_coach_authorization(
     
     logger = logging.getLogger(__name__)
     
+    clerk_user_id = user_info['clerk_user_id']
     user_service = UserService()
     user = await user_service.get_user_by_clerk_id(clerk_user_id)
     
@@ -209,12 +214,13 @@ async def verify_coach_for_client(
 
 @router.post("/dev/create-current-user")
 async def create_current_user_manually(
-    clerk_user_id: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """Development endpoint to manually create current user in database"""
     from app.services.user_service import UserService
     import clerk
     
+    clerk_user_id = user_info['clerk_user_id']
     user_service = UserService()
     
     # Check if user already exists

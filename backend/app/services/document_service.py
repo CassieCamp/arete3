@@ -3,15 +3,17 @@ from typing import BinaryIO, List
 from app.models.document import Document, DocumentType, DocumentCategory
 from app.repositories.document_repository import DocumentRepository
 from app.services.text_extraction_service import TextExtractionService
+from app.services.session_insight_service import SessionInsightService
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 class DocumentService:
-    def __init__(self, document_repository: DocumentRepository):
+    def __init__(self, document_repository: DocumentRepository, session_insight_service: SessionInsightService):
         self.document_repository = document_repository
         self.text_extraction_service = TextExtractionService()
+        self.session_insight_service = session_insight_service
 
     async def upload_document(
         self,
@@ -185,6 +187,56 @@ class DocumentService:
             
             if updated_document:
                 logger.info(f"✅ Successfully updated document {document.id} with extracted text")
+                
+                # Generate AI-powered metadata and insight from the extracted text
+                try:
+                    logger.info(f"🧠 Generating AI metadata and insight for document {document.id}")
+                    
+                    # Generate intelligent title and metadata using AI
+                    from app.services.ai_service import AIService
+                    ai_service = AIService()
+                    
+                    metadata = await ai_service.generate_document_metadata(
+                        filename=document.file_name,
+                        content=extracted_text
+                    )
+                    
+                    logger.info(f"✅ Generated AI metadata: {metadata.get('title', 'No title')}")
+                    
+                    # Update document with AI-generated metadata
+                    await self.document_repository.update_document(
+                        str(document.id),
+                        {
+                            "description": metadata.get("description", ""),
+                            "tags": metadata.get("tags", []),
+                            "category": metadata.get("category", document.category.value)
+                        }
+                    )
+                    
+                    # Create insight with AI-generated title
+                    ai_title = metadata.get("title", document.file_name)
+                    await self.session_insight_service.create_unpaired_insight_from_transcript(
+                        client_user_id=document.clerk_user_id,
+                        transcript_content=extracted_text,
+                        session_title=ai_title,
+                        source_document_id=str(document.id)
+                    )
+                    logger.info(f"✅ Successfully generated insight for document {document.id} with AI title: {ai_title}")
+                    
+                except Exception as insight_error:
+                    logger.error(f"❌ Error generating AI metadata/insight for document {document.id}: {insight_error}")
+                    # Fallback to original behavior
+                    try:
+                        await self.session_insight_service.create_unpaired_insight_from_transcript(
+                            client_user_id=document.clerk_user_id,
+                            transcript_content=extracted_text,
+                            session_title=document.file_name,
+                            source_document_id=str(document.id)
+                        )
+                        logger.info(f"✅ Fallback: Generated insight with original filename")
+                    except Exception as fallback_error:
+                        logger.error(f"❌ Fallback insight generation also failed: {fallback_error}")
+                    # Don't raise the error as the document was successfully processed
             else:
                 logger.error(f"Failed to update document {document.id} in database")
                 

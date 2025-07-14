@@ -157,6 +157,8 @@ class Entry(BaseModel):
     session_date: Optional[datetime] = None  # When the session occurred
     transcript_content: Optional[str] = None  # For session entries
     content: Optional[str] = None  # For fresh thought entries
+    transcript_source: Optional[str] = None  # "file_upload", "text_input", "url_import"
+    source_document_id: Optional[str] = None  # If uploaded as document
     tags: List[str] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
     

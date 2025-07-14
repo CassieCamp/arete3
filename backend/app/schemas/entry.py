@@ -30,6 +30,8 @@ class EntryResponse(BaseModel):
     completed_at: Optional[str] = None
     detected_goals: List[DetectedGoal] = Field(default_factory=list)
     has_insights: bool = Field(default=False, description="Whether entry has AI-generated insights")
+    content: Optional[str] = Field(None, description="Entry content for display")
+    transcript_source: Optional[str] = Field(None, description="Source of transcript: 'file_upload', 'text_input', 'url_import'")
 
 
 class EntryDetailResponse(EntryResponse):

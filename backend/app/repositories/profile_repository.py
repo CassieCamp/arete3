@@ -12,7 +12,8 @@ class ProfileRepository:
     async def create_profile(self, profile: Profile) -> Profile:
         """Create a new profile"""
         db = get_database()
-        profile_dict = profile.dict(by_alias=True, exclude_unset=True)
+        # FIX: Use model_dump() instead of deprecated dict() method for Pydantic v2
+        profile_dict = profile.model_dump(by_alias=True, exclude_unset=True)
         
         # Remove the id field if it's None or empty
         if "_id" in profile_dict and profile_dict["_id"] is None:
@@ -53,19 +54,20 @@ class ProfileRepository:
         return None
 
     async def update_profile(self, user_id: str, update_data: dict) -> Optional[Profile]:
-        """Update profile by user ID"""
+        """Update profile by clerk_user_id (not user_id)"""
         db = get_database()
         
         # Add updated_at timestamp
         update_data["updated_at"] = datetime.utcnow()
         
+        # FIX: Update by clerk_user_id instead of user_id to match how profiles are queried
         result = await db[self.collection_name].update_one(
-            {"user_id": user_id},
+            {"clerk_user_id": user_id},
             {"$set": update_data}
         )
         
         if result.modified_count:
-            return await self.get_profile_by_user_id(user_id)
+            return await self.get_profile_by_clerk_id(user_id)
         return None
 
     async def delete_profile(self, user_id: str) -> bool:

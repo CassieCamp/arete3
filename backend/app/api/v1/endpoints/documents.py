@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from app.api.v1.deps import get_current_user_clerk_id
 from app.services.document_service import DocumentService
 from app.services.user_service import UserService
+from app.services.session_insight_service import SessionInsightService
 from app.repositories.document_repository import DocumentRepository
 from app.schemas.document import DocumentResponse
 from app.models.document import DocumentCategory, DocumentType
@@ -42,7 +43,8 @@ async def get_user_documents(
         
         # Initialize document service
         document_repository = DocumentRepository()
-        document_service = DocumentService(document_repository)
+        session_insight_service = SessionInsightService()
+        document_service = DocumentService(document_repository, session_insight_service)
         
         # Get all documents for the user
         documents = await document_service.get_user_documents(user_id)
@@ -153,7 +155,8 @@ async def upload_document(
         
         # Initialize document service
         document_repository = DocumentRepository()
-        document_service = DocumentService(document_repository)
+        session_insight_service = SessionInsightService()
+        document_service = DocumentService(document_repository, session_insight_service)
         
         # Upload the document
         uploaded_document = await document_service.upload_document(

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form
 from typing import Optional, List
-from app.api.v1.deps import get_current_user_clerk_id
+from app.api.v1.deps import org_optional
 from app.schemas.entry import (
     EntryCreateRequest,
     EntryResponse,
@@ -34,7 +34,9 @@ def _convert_to_response(entry) -> EntryResponse:
         updated_at=entry.updated_at.isoformat(),
         completed_at=entry.completed_at.isoformat() if entry.completed_at else None,
         detected_goals=entry.detected_goals,
-        has_insights=len(entry.celebrations) > 0 or len(entry.intentions) > 0 or len(entry.client_discoveries) > 0
+        has_insights=len(entry.celebrations) > 0 or len(entry.intentions) > 0 or len(entry.client_discoveries) > 0,
+        content=entry.content or entry.transcript_content,
+        transcript_source=entry.transcript_source
     )
 
 
@@ -62,7 +64,7 @@ def _convert_to_detail_response(entry) -> EntryDetailResponse:
 @router.post("/", response_model=EntryResponse)
 async def create_entry(
     request: EntryCreateRequest,
-    current_user_id: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """
     Create a new entry (session or fresh thought).
@@ -71,6 +73,7 @@ async def create_entry(
     Includes freemium gating to limit non-coached users to 3 entries.
     """
     try:
+        current_user_id = user_info['clerk_user_id']
         logger.info(f"=== create_entry called ===")
         logger.info(f"user: {current_user_id}, type: {request.entry_type}")
         
@@ -131,7 +134,7 @@ async def create_entry_from_file(
     input_method: str = Form("upload"),
     title: Optional[str] = Form(None),
     file: UploadFile = File(...),
-    current_user_id: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """
     Create a new entry from an uploaded file (supports PDF and text files).
@@ -140,6 +143,7 @@ async def create_entry_from_file(
     from PDF files using the text extraction service.
     """
     try:
+        current_user_id = user_info['clerk_user_id']
         logger.info(f"=== create_entry_from_file called ===")
         logger.info(f"user: {current_user_id}, type: {entry_type}, file: {file.filename}")
         
@@ -236,7 +240,7 @@ async def get_entries(
     entry_type: Optional[str] = None,
     limit: int = 20,
     offset: int = 0,
-    current_user_id: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """
     Get entries for the current user with optional filtering.
@@ -244,6 +248,7 @@ async def get_entries(
     Includes freemium gating for entry access.
     """
     try:
+        current_user_id = user_info['clerk_user_id']
         logger.info(f"=== get_entries called ===")
         logger.info(f"user: {current_user_id}, type: {entry_type}")
         
@@ -300,7 +305,7 @@ async def get_entries(
 @router.get("/{entry_id}", response_model=EntryDetailResponse)
 async def get_entry_detail(
     entry_id: str,
-    current_user_id: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """
     Get detailed view of a specific entry.
@@ -308,6 +313,7 @@ async def get_entry_detail(
     Includes freemium gating for detailed insights.
     """
     try:
+        current_user_id = user_info['clerk_user_id']
         logger.info(f"=== get_entry_detail called ===")
         logger.info(f"user: {current_user_id}, entry: {entry_id}")
         
@@ -339,12 +345,13 @@ async def get_entry_detail(
 async def accept_detected_goals(
     entry_id: str,
     request: AcceptGoalsRequest,
-    current_user_id: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """
     Accept detected goals from an entry and convert them to destinations.
     """
     try:
+        current_user_id = user_info['clerk_user_id']
         logger.info(f"=== accept_detected_goals called ===")
         logger.info(f"entry: {entry_id}, user: {current_user_id}")
         
@@ -376,12 +383,13 @@ async def accept_detected_goals(
 
 @router.get("/freemium/status", response_model=FreemiumStatusResponse)
 async def get_freemium_status(
-    current_user_id: str = Depends(get_current_user_clerk_id)
+    user_info: dict = Depends(org_optional)
 ):
     """
     Get freemium status for entry creation.
     """
     try:
+        current_user_id = user_info['clerk_user_id']
         logger.info(f"=== get_freemium_status called ===")
         logger.info(f"user: {current_user_id}")
         

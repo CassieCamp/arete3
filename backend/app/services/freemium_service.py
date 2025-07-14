@@ -25,7 +25,21 @@ class FreemiumService:
             # Get user profile
             profile = await self.profiles_repository.get_profile_by_clerk_id(user_id)
             if not profile:
-                raise ValueError("User profile not found")
+                logger.warning(f"Profile not found for user_id: {user_id}, returning default freemium status")
+                # FIX: Return default freemium status instead of raising exception
+                # This prevents 500 errors for users without profiles
+                return {
+                    "has_coach": False,
+                    "entries_count": 0,
+                    "max_free_entries": 3,
+                    "coach_requested": False,
+                    "coach_request_date": None,
+                    "can_create_entries": True,  # Allow first 3 entries
+                    "can_access_insights": False,
+                    "can_access_destinations": False,
+                    "is_freemium": True,
+                    "entries_remaining": 3
+                }
             
             # Check if user has an active coaching relationship
             has_coach = await self._check_has_active_coach(user_id)
@@ -253,10 +267,16 @@ class FreemiumService:
         Update the freemium status in the user's profile.
         """
         try:
+            logger.info(f"=== _update_profile_freemium_status called ===")
+            logger.info(f"user_id: {user_id}")
+            
             # Get profile
             profile = await self.profiles_repository.get_profile_by_clerk_id(user_id)
             if not profile:
+                logger.error(f"Profile not found for user_id: {user_id}")
                 return False
+            
+            logger.info(f"Found profile with id: {profile.id}")
             
             # Update freemium status
             from app.models.profile import FreemiumStatus
@@ -264,20 +284,26 @@ class FreemiumService:
             
             # Convert dict to FreemiumStatus model
             freemium_model = FreemiumStatus(**freemium_status)
+            logger.info(f"Created FreemiumStatus model: {freemium_model.model_dump()}")
             
-            # Update profile
+            # FIX: Use clerk_user_id instead of profile.id for update_profile
+            # The ProfileRepository.update_profile expects user_id, not profile_id
             success = await self.profiles_repository.update_profile(
-                str(profile.id),
+                user_id,  # Use clerk_user_id directly
                 {
                     "freemium_status": freemium_model.model_dump(),
                     "updated_at": datetime.utcnow()
                 }
             )
             
+            logger.info(f"Profile update success: {success}")
             return success
             
         except Exception as e:
-            logger.error(f"Error updating profile freemium status: {e}")
+            logger.error(f"❌ Error updating profile freemium status: {e}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return False
 
     async def _notify_coach_request(self, user_id: str):
