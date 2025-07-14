@@ -195,3 +195,24 @@ class UserService:
         except Exception as e:
             logger.error(f"Error updating user role from Clerk: {e}")
             raise
+
+    async def update_user_session_settings(self, clerk_user_id: str, session_auto_send_context: bool) -> Optional[User]:
+        """Update user session settings"""
+        logger.info(f"=== UserService.update_user_session_settings called ===")
+        logger.info(f"clerk_user_id: {clerk_user_id}, session_auto_send_context: {session_auto_send_context}")
+        
+        try:
+            updated_user = await self.user_repository.update_user_session_settings(
+                clerk_user_id, session_auto_send_context
+            )
+            
+            if updated_user:
+                logger.info(f"✅ Successfully updated session settings for user: {clerk_user_id}")
+            else:
+                logger.warning(f"⚠️ Failed to update session settings for user: {clerk_user_id}")
+                
+            return updated_user
+            
+        except Exception as e:
+            logger.error(f"Error updating user session settings: {e}")
+            raise

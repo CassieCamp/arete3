@@ -3,6 +3,11 @@ Session Validation Middleware
 
 Detects stale JWT claims and provides session refresh recommendations
 when Clerk publicMetadata doesn't match JWT claims.
+
+When a stale session is detected, the middleware adds the following headers:
+- X-Session-Refresh-Required: true (signals frontend to refresh token)
+- X-Session-Refresh-Recommended: true (backward compatibility)
+- X-Session-Stale-Reason: role-mismatch (indicates the reason for staleness)
 """
 
 import logging
@@ -74,12 +79,14 @@ class SessionValidationMiddleware:
                 "refresh_recommended": False
             }
     
-    async def add_session_headers(self, 
-                                response_headers: Dict[str, str], 
+    async def add_session_headers(self,
+                                response_headers: Dict[str, str],
                                 validation_result: Dict[str, Any]) -> None:
         """Add session validation headers to response"""
         
         if validation_result.get("refresh_recommended"):
+            # Add the required header for frontend token refresh
+            response_headers["X-Session-Refresh-Required"] = "true"
             response_headers["X-Session-Refresh-Recommended"] = "true"
             response_headers["X-Session-Stale-Reason"] = "role-mismatch"
             
@@ -115,6 +122,7 @@ class SessionValidationMiddleware:
                 detail="Session is stale, please refresh your session",
                 headers={
                     "X-Session-Refresh-Required": "true",
+                    "X-Session-Refresh-Recommended": "true",
                     "X-Session-Stale-Reason": "role-mismatch"
                 }
             )

@@ -1,5 +1,6 @@
 from typing import Optional
 from bson import ObjectId
+from datetime import datetime
 from app.models.user import User
 from app.db.mongodb import get_database
 import logging
@@ -127,6 +128,44 @@ class UserRepository:
         if result.modified_count:
             return await self.get_user_by_id(user_id)
         return None
+
+    async def update_user_session_settings(self, clerk_user_id: str, session_auto_send_context: bool) -> Optional[User]:
+        """Update user session settings by Clerk ID"""
+        logger.info(f"=== UserRepository.update_user_session_settings called ===")
+        logger.info(f"clerk_user_id: {clerk_user_id}, session_auto_send_context: {session_auto_send_context}")
+        
+        try:
+            db = get_database()
+            if db is None:
+                logger.error("Database is None")
+                raise Exception("Database connection is None")
+            
+            update_data = {
+                "session_auto_send_context": session_auto_send_context,
+                "updated_at": datetime.utcnow()
+            }
+            
+            result = await db[self.collection_name].update_one(
+                {"clerk_user_id": clerk_user_id},
+                {"$set": update_data}
+            )
+            
+            logger.info(f"Update result: matched={result.matched_count}, modified={result.modified_count}")
+            
+            if result.matched_count > 0:
+                updated_user = await self.get_user_by_clerk_id(clerk_user_id)
+                logger.info(f"✅ Successfully updated session settings for user: {clerk_user_id}")
+                return updated_user
+            else:
+                logger.warning(f"No user found with Clerk ID: {clerk_user_id}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"❌ Error updating user session settings: {e}")
+            logger.error(f"Exception type: {type(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise
 
     async def delete_user(self, user_id: str) -> bool:
         """Delete user"""

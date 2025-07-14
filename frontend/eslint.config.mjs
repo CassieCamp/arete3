@@ -26,6 +26,18 @@ const eslintConfig = [
         {
           selector: "Literal[value=/^hsl\\(/]",
           message: "Use CSS custom properties instead of hsl() functions"
+        },
+        {
+          selector: "CallExpression[callee.type='MemberExpression'][callee.property.name='filter'][callee.object.name=/.*NAVIGATION$/]",
+          message: "Do not use .filter() on navigation arrays. Use getMainNavigationForRole() or getMenuNavigationForRole() instead to prevent role leakage."
+        },
+        {
+          selector: "CallExpression[callee.type='MemberExpression'][callee.property.name='filter'] > MemberExpression[object.name='MAIN_NAVIGATION']",
+          message: "Do not filter MAIN_NAVIGATION directly. Use getMainNavigationForRole() to prevent role leakage."
+        },
+        {
+          selector: "CallExpression[callee.type='MemberExpression'][callee.property.name='filter'] > MemberExpression[object.name='MENU_NAVIGATION']",
+          message: "Do not filter MENU_NAVIGATION directly. Use getMenuNavigationForRole() to prevent role leakage."
         }
       ]
     }

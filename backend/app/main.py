@@ -16,7 +16,9 @@ from app.api.v1.endpoints.discovery_form import router as discovery_form_router
 from app.api.v1.endpoints.quotes import router as quotes_router
 from app.api.v1.endpoints.destinations import router as destinations_router
 from app.api.v1.endpoints.coach import router as coach_router
+from app.api.v1.endpoints.member import router as member_router
 from app.api.v1.endpoints.freemium import router as freemium_router
+from app.api.v1.endpoints.admin import router as admin_router
 from app.api.v1.webhooks.clerk import router as clerk_router
 from app.api.v1.deps import org_required, org_optional
 from app.db.mongodb import connect_to_mongo, close_mongo_connection
@@ -71,7 +73,9 @@ app.include_router(discovery_form_router, prefix="/api/v1/discovery-form", tags=
 app.include_router(quotes_router, prefix="/api/v1", tags=["quotes"])
 app.include_router(destinations_router, prefix="/api/v1/destinations", tags=["destinations"])
 app.include_router(coach_router, prefix="/api/v1/coach", tags=["coach"])
+app.include_router(member_router, prefix="/api/v1/member", tags=["member"])
 app.include_router(freemium_router, prefix="/api/v1/freemium", tags=["freemium"])
+app.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
 app.include_router(clerk_router, prefix="/api/v1/webhooks", tags=["webhooks"])
 
 

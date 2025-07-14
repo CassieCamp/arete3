@@ -3,8 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useUser, useAuth as useClerkAuth } from '@clerk/nextjs';
 import {
-  MAIN_NAVIGATION,
-  MENU_NAVIGATION,
+  getMainNavigationForRole,
   getMenuNavigationForRole,
   MainNavigationItem,
   MenuNavigationItem
@@ -15,7 +14,7 @@ interface NavigationContextType {
   menuNavigation: MenuNavigationItem[];
   isMobileMenuOpen: boolean;
   setIsMobileMenuOpen: (open: boolean) => void;
-  userRole: 'coach' | 'client' | null;
+  userRole: 'member' | 'coach' | 'admin' | null;
   isLoading: boolean;
 }
 
@@ -31,7 +30,7 @@ export function NavigationProvider({ children }: NavigationProviderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [menuNavigation, setMenuNavigation] = useState<MenuNavigationItem[]>([]);
   const [mainNavigation, setMainNavigation] = useState<MainNavigationItem[]>([]);
-  const [userRole, setUserRole] = useState<'coach' | 'client' | null>(null);
+  const [userRole, setUserRole] = useState<'member' | 'coach' | 'admin' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -39,17 +38,29 @@ export function NavigationProvider({ children }: NavigationProviderProps) {
       if (isSignedIn && user) {
         // Get user role from Clerk's publicMetadata
         const primaryRole = user.publicMetadata?.primary_role as string;
-        const role = primaryRole === 'coach' ? 'coach' : 'client'; // Convert to legacy format
-        setUserRole(role);
+        
+        // Map Clerk roles to our navigation role system
+        let navigationRole: 'member' | 'coach' | 'admin';
+        switch (primaryRole) {
+          case 'coach':
+            navigationRole = 'coach';
+            break;
+          case 'admin':
+            navigationRole = 'admin';
+            break;
+          case 'member':
+          default:
+            navigationRole = 'member';
+            break;
+        }
+        
+        setUserRole(navigationRole);
 
-        // Filter main navigation items based on role using the roles property
-        const filteredMainNavigation = MAIN_NAVIGATION.filter(item => {
-          return item.legacyRoles?.includes(role) || item.roles.includes(primaryRole);
-        });
-        setMainNavigation(filteredMainNavigation);
-
-        // Get menu navigation items for the user's role
-        const roleMenuNavigation = getMenuNavigationForRole(role);
+        // Get navigation items directly for the user's role - no filtering needed!
+        const roleMainNavigation = getMainNavigationForRole(navigationRole);
+        const roleMenuNavigation = getMenuNavigationForRole(navigationRole);
+        
+        setMainNavigation(roleMainNavigation);
         setMenuNavigation(roleMenuNavigation);
         setIsLoading(false);
       } else {

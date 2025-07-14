@@ -44,6 +44,9 @@ class User(BaseModel):
     )
     # Format: {"org_123": {"role": "admin", "permissions": ["manage_members", "view_analytics"]}}
     
+    # Session settings
+    session_auto_send_context: bool = Field(default=False, description="Auto-send context summary to coach")
+    
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

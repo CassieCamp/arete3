@@ -1,4 +1,5 @@
 import { useAuth as useClerkAuth, useUser, useOrganization } from '@clerk/nextjs';
+import { useCallback } from 'react';
 
 /**
  * Custom hook for making authenticated API calls with proper headers
@@ -8,7 +9,7 @@ export function useApiClient() {
   const { user } = useUser();
   const { organization } = useOrganization();
 
-  const makeApiCall = async (url: string, options: RequestInit = {}) => {
+  const makeApiCall = useCallback(async (url: string, options: RequestInit = {}) => {
     // Get authentication token
     const token = await getToken();
     if (!token) {
@@ -39,16 +40,16 @@ export function useApiClient() {
       ...options,
       headers
     });
-  };
+  }, [getToken, organization?.id]);
 
-  const getAuthToken = async (): Promise<string | null> => {
+  const getAuthToken = useCallback(async (): Promise<string | null> => {
     try {
       return await getToken();
     } catch (error) {
       console.error('Failed to get auth token:', error);
       return null;
     }
-  };
+  }, [getToken]);
 
   return {
     makeApiCall,
