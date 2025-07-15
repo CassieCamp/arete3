@@ -139,7 +139,10 @@ export default function HomePage() {
       </section>
 
       <FounderMessage />
+
+
       <StatsSection />
+
 
       {/* Discovery Form Section */}
       <section className="py-16 px-4 bg-background">

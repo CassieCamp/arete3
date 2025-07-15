@@ -7,10 +7,10 @@ const FounderMessage: React.FC = () => {
   return (
     <section className="bg-background py-16 sm:py-24">
       <div className="container mx-auto px-4 max-w-4xl">
-        <div className="text-left">
-          <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-8">
+        <div className="text-center">
+          <h2 className="text-4xl font-bold font-serif text-foreground mb-6">
             I built the coaching app of my dreams
-          </h1>
+          </h2>
           <div className="prose prose-lg max-w-none text-foreground/80 space-y-4">
             <p>
               I'm a 20+ year startup veteran, product exec, and coach who's had multiple coaches since 2019 - from boutique executive firms to solo practitioners to peer circles. I've also coached startup founders and AI/ML engineers on retainer. I know this space from both sides.
