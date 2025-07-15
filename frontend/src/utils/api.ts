@@ -33,8 +33,7 @@ export function useApiClient() {
       delete headers['Content-Type'];
     }
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-    const fullUrl = url.startsWith('http') ? url : `${apiUrl}${url}`;
+    const fullUrl = url.startsWith('http') ? url : url;
 
     return fetch(fullUrl, {
       ...options,

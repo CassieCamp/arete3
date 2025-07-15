@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.schemas.coaching_relationship import UserRelationshipsResponse
 from app.schemas.coaching_interest import CoachingInterestCreate
-from app.schemas.user import UserSessionSettingsUpdate
+from app.schemas.session import UserSessionSettingsUpdate
 from app.services.coaching_relationship_service import CoachingRelationshipService
 from app.services.user_service import UserService
 from app.repositories.coaching_relationship_repository import CoachingRelationshipRepository
@@ -47,7 +47,7 @@ async def convert_relationship_to_response(relationship, user_repository: UserRe
     )
 
 
-@router.get("/coaching-relationships/", response_model=UserRelationshipsResponse)
+@router.get("/coaching-relationships", response_model=UserRelationshipsResponse)
 async def get_member_coaching_relationships(
     user_info: dict = Depends(org_optional),
     service: CoachingRelationshipService = Depends(get_coaching_relationship_service)
@@ -92,7 +92,7 @@ async def get_member_coaching_relationships(
         )
 
 
-@router.post("/coaching-interest/")
+@router.post("/coaching-interest")
 async def submit_coaching_interest(
     coaching_interest: CoachingInterestCreate
 ):
@@ -123,7 +123,7 @@ async def submit_coaching_interest(
         )
 
 
-@router.get("/session-settings/")
+@router.get("/session-settings")
 async def get_session_settings(
     user_info: dict = Depends(org_optional),
     user_service: UserService = Depends(get_user_service)
@@ -157,7 +157,7 @@ async def get_session_settings(
         )
 
 
-@router.put("/session-settings/")
+@router.put("/session-settings")
 async def update_session_settings(
     settings: UserSessionSettingsUpdate,
     user_info: dict = Depends(org_optional),

@@ -20,6 +20,7 @@ class CoachingRelationshipResponse(BaseModel):
     coach_user_id: str = Field(..., description="Coach user ID")
     client_user_id: str = Field(..., description="Client user ID")
     coach_email: Optional[str] = Field(None, description="Coach email address")
+    coach_image_url: Optional[str] = Field(None, description="Coach profile image URL")
     client_email: Optional[str] = Field(None, description="Client email address")
     status: RelationshipStatus = Field(..., description="Relationship status")
     created_at: datetime = Field(..., description="Creation timestamp")

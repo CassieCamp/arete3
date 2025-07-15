@@ -48,7 +48,7 @@ export default function CoachingPage() {
         <PageHeader
           icon={Users}
           title="Coaching"
-          subtitle="Your coaching connections and relationships"
+          subtitle=""
         />
         
         <div className="mt-8">

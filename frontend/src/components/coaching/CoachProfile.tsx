@@ -12,7 +12,7 @@ interface Coach {
   specialties?: string[];
   location?: string;
   rating?: number;
-  profilePhoto?: string;
+  imageUrl?: string;
 }
 
 interface CoachProfileProps {
@@ -26,39 +26,23 @@ export function CoachProfile({ coach }: CoachProfileProps) {
         <div className="flex items-start gap-4">
           {/* Profile Photo */}
           <div className="flex-shrink-0">
-            {coach.profilePhoto ? (
-              <img
-                src={coach.profilePhoto}
-                alt={`${coach.name}'s profile`}
-                className="w-16 h-16 rounded-full object-cover border-2 border-border"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center border-2 border-border">
-                <User className="w-8 h-8 text-muted-foreground" />
-              </div>
-            )}
+            <img
+              src="/images/yoda-jedi.png"
+              alt={`${coach.name}'s profile`}
+              className="w-24 h-24 rounded-full object-cover border-2 border-border"
+            />
           </div>
 
           {/* Coach Info */}
           <div className="flex-1 min-w-0">
             <CardTitle className="text-xl font-serif text-foreground mb-1">
-              {coach.name}
+              Master Yoda
             </CardTitle>
             
-            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-              {coach.location && (
-                <div className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  <span>{coach.location}</span>
-                </div>
-              )}
-              
-              {coach.rating && (
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 fill-current text-accent" />
-                  <span>{coach.rating.toFixed(1)}</span>
-                </div>
-              )}
+            <div className="text-sm text-muted-foreground mb-2 space-y-1">
+              <p><strong>Session Count:</strong> 6</p>
+              <p><strong>First Session Date:</strong> 3 ABY, Month 2</p>
+              <p><strong>Last Session Date:</strong> 4 ABY, Month 1</p>
             </div>
 
             {/* Specialties */}
@@ -80,13 +64,11 @@ export function CoachProfile({ coach }: CoachProfileProps) {
       </CardHeader>
 
       {/* Bio */}
-      {coach.bio && (
-        <CardContent>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            {coach.bio}
-          </p>
-        </CardContent>
-      )}
+      <CardContent>
+        <blockquote className="mt-6 border-l-2 pl-6 italic">
+          "Remember this question, you must: 'What am I bringing with me?' Into every situation, ask this you should. Into every relationship, every decision, every moment of challenge - what fears, what anger, what assumptions do you carry?"
+        </blockquote>
+      </CardContent>
     </Card>
   );
 }

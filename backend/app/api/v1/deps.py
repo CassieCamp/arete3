@@ -18,9 +18,6 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
-# Initialize Clerk client
-clerk = Clerk(bearer_auth=settings.clerk_secret_key)
-
 # Security scheme
 security = HTTPBearer()
 
@@ -226,55 +223,13 @@ async def get_current_user_clerk_id(
                 logger.error(f"❌ Session validation error for {clerk_user_id}: {validation_error}")
                 # Continue with authentication even if validation fails
             
-            # Check if user exists in backend database
+            # Check if user exists in backend database and sync if not
             user_service = UserService()
             existing_user = await user_service.get_user_by_clerk_id(clerk_user_id)
             
             if not existing_user:
-                logger.warning(f"⚠️ User {clerk_user_id} authenticated but not found in backend database")
-                
-                # Fetch user details from Clerk to sync to backend
-                try:
-                    logger.info(f"🔄 Fetching user details from Clerk for {clerk_user_id}")
-                    clerk_user = clerk.users.get(user_id=clerk_user_id)
-                    
-                    # Get primary email
-                    primary_email = None
-                    if clerk_user.email_addresses:
-                        for email in clerk_user.email_addresses:
-                            if email.id == clerk_user.primary_email_address_id:
-                                primary_email = email.email_address
-                                break
-                        if not primary_email:
-                            primary_email = clerk_user.email_addresses[0].email_address
-                    
-                    if not primary_email:
-                        logger.error(f"❌ No email found for Clerk user {clerk_user_id}")
-                        raise HTTPException(
-                            status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="User has no email address"
-                        )
-                    
-                    logger.info(f"📧 Found email for user: {primary_email}")
-                    
-                    # Use primary_role from Clerk metadata, defaulting to "client"
-                    final_role = primary_role if primary_role != "member" else "client"
-                    
-                    logger.info(f"👤 Assigning role '{final_role}' to user {primary_email}")
-                    
-                    # Create user in backend database
-                    created_user = await user_service.create_user_from_clerk(
-                        clerk_user_id=clerk_user_id,
-                        email=primary_email,
-                        primary_role=final_role
-                    )
-                    
-                    logger.info(f"✅ Successfully synced user to backend: {created_user.id}")
-                    
-                except Exception as sync_error:
-                    logger.error(f"❌ Failed to sync user {clerk_user_id} to backend: {sync_error}")
-                    # Don't fail authentication, just log the error
-                    # The user can still authenticate, but some features might not work
+                logger.warning(f"⚠️ User {clerk_user_id} not in DB, attempting sync from Clerk.")
+                await user_service.sync_user_from_clerk(clerk_user_id, primary_role)
             else:
                 logger.info(f"✅ User {clerk_user_id} found in backend database: {existing_user.id}")
             

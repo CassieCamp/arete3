@@ -9,7 +9,7 @@ interface Coach {
   specialties?: string[];
   location?: string;
   rating?: number;
-  profilePhoto?: string;
+  imageUrl?: string;
 }
 
 interface CoachingRelationship {
@@ -53,7 +53,7 @@ export function useCoachingRelationships() {
         setIsLoading(true);
         setError(null);
 
-        const response = await makeApiCall('/api/v1/member/coaching-relationships/');
+        const response = await makeApiCall('/api/v1/member/coaching-relationships');
         
         if (!response.ok) {
           throw new Error(`Failed to fetch coaching relationships: ${response.status}`);
@@ -63,46 +63,23 @@ export function useCoachingRelationships() {
         
         if (!isMounted) return;
         
-        // Transform the API response to match the expected format for the UI
-        const transformedRelationships: TransformedRelationship[] = [];
-        
-        // Process active relationships
-        data.active.forEach((relationship: CoachingRelationship) => {
-          transformedRelationships.push({
+        const processRelationships = (relationships: CoachingRelationship[]): TransformedRelationship[] => {
+          return relationships.map((relationship) => ({
             id: relationship.id,
             coach: {
               id: relationship.coach_user_id,
-              name: relationship.coach_email || 'Unknown Coach', // Fallback until we have proper coach profiles
+              name: 'Your Coach', // Placeholder name
               email: relationship.coach_email || '',
-              bio: 'Coach profile information will be available soon.',
-              specialties: ['General Coaching'],
-              location: 'Location not specified',
-              rating: 5.0
             },
             status: relationship.status,
             createdAt: relationship.created_at,
-            autoSendEnabled: false // This will be managed by the session settings hook
-          });
-        });
-        
-        // Process pending relationships
-        data.pending.forEach((relationship: CoachingRelationship) => {
-          transformedRelationships.push({
-            id: relationship.id,
-            coach: {
-              id: relationship.coach_user_id,
-              name: relationship.coach_email || 'Unknown Coach',
-              email: relationship.coach_email || '',
-              bio: 'Coach profile information will be available soon.',
-              specialties: ['General Coaching'],
-              location: 'Location not specified',
-              rating: 5.0
-            },
-            status: relationship.status,
-            createdAt: relationship.created_at,
-            autoSendEnabled: false
-          });
-        });
+            autoSendEnabled: false,
+          }));
+        };
+
+        const activeRelationships = processRelationships(data.active);
+        const pendingRelationships = processRelationships(data.pending);
+        const transformedRelationships = [...activeRelationships, ...pendingRelationships];
         
         setRelationships(transformedRelationships);
       } catch (err) {
@@ -129,7 +106,7 @@ export function useCoachingRelationships() {
       setIsLoading(true);
       setError(null);
 
-      const response = await makeApiCall('/api/v1/member/coaching-relationships/');
+      const response = await makeApiCall('/api/v1/member/coaching-relationships');
       
       if (!response.ok) {
         throw new Error(`Failed to fetch coaching relationships: ${response.status}`);
@@ -137,46 +114,23 @@ export function useCoachingRelationships() {
       
       const data: CoachingRelationshipsResponse = await response.json();
       
-      // Transform the API response to match the expected format for the UI
-      const transformedRelationships: TransformedRelationship[] = [];
-      
-      // Process active relationships
-      data.active.forEach((relationship: CoachingRelationship) => {
-        transformedRelationships.push({
+      const processRelationships = (relationships: CoachingRelationship[]): TransformedRelationship[] => {
+        return relationships.map((relationship) => ({
           id: relationship.id,
           coach: {
             id: relationship.coach_user_id,
-            name: relationship.coach_email || 'Unknown Coach',
+            name: 'Your Coach', // Placeholder name
             email: relationship.coach_email || '',
-            bio: 'Coach profile information will be available soon.',
-            specialties: ['General Coaching'],
-            location: 'Location not specified',
-            rating: 5.0
           },
           status: relationship.status,
           createdAt: relationship.created_at,
-          autoSendEnabled: false
-        });
-      });
-      
-      // Process pending relationships
-      data.pending.forEach((relationship: CoachingRelationship) => {
-        transformedRelationships.push({
-          id: relationship.id,
-          coach: {
-            id: relationship.coach_user_id,
-            name: relationship.coach_email || 'Unknown Coach',
-            email: relationship.coach_email || '',
-            bio: 'Coach profile information will be available soon.',
-            specialties: ['General Coaching'],
-            location: 'Location not specified',
-            rating: 5.0
-          },
-          status: relationship.status,
-          createdAt: relationship.created_at,
-          autoSendEnabled: false
-        });
-      });
+          autoSendEnabled: false,
+        }));
+      };
+
+      const activeRelationships = processRelationships(data.active);
+      const pendingRelationships = processRelationships(data.pending);
+      const transformedRelationships = [...activeRelationships, ...pendingRelationships];
       
       setRelationships(transformedRelationships);
     } catch (err) {
