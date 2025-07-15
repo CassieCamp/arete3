@@ -1,31 +1,20 @@
 "use client";
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useClerk, useUser, UserButton } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AuthDropdown } from '@/components/auth/AuthDropdown';
 import { Check } from 'lucide-react';
+import FounderMessage from '@/components/landing/FounderMessage';
+import StatsSection from '@/components/landing/StatsSection';
 
 export default function HomePage() {
   const router = useRouter();
   const { redirectToSignIn } = useClerk();
   const { user, isSignedIn } = useUser();
-  
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    linkedinUrl: '',
-    roles: [] as string[],
-    insights: ''
-  });
 
   const pricingTiers = [
     {
@@ -40,7 +29,7 @@ export default function HomePage() {
         "Solo player mode without a coach",
         "Get $50 credit for any client referral that signs up and makes their first payment and $100 for any coach that signs up and makes their first payment"
       ],
-      cta: "Start Free",
+      cta: "Join the Waitlist",
       ctaVariant: "outline" as const
     },
     {
@@ -54,7 +43,7 @@ export default function HomePage() {
         "One lifelong journey across all coaches*",
         "Covers coaching costs for coaches not on the Pro plan**"
       ],
-      cta: "Start 14-Day Trial",
+      cta: "Join the Waitlist",
       ctaVariant: "default" as const,
       smallPrint: "* Between active coaching periods, hibernation mode available at $5/month to preserve your journey data.\n** If your coach upgrades to the Coach Professional plan, you'll receive a credit for one quarter ($237)."
     },
@@ -71,27 +60,10 @@ export default function HomePage() {
         "Simplify scheduling and billing",
         "$100 credit for every client added"
       ],
-      cta: "Start 14-Day Trial",
+      cta: "Join the Waitlist",
       ctaVariant: "default" as const
     }
   ];
-
-  const handleRoleChange = (role: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      roles: checked 
-        ? [...prev.roles, role]
-        : prev.roles.filter(r => r !== role)
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle form submission - could integrate with backend API
-    console.log('Form submitted:', formData);
-    // For now, show confirmation or redirect to appropriate page
-  };
-
 
   return (
     <div className="min-h-screen bg-background">
@@ -120,9 +92,9 @@ export default function HomePage() {
             ) : (
               <>
                 <AuthDropdown variant="ghost" />
-                <Link href="/sign-up">
+                <Link href="https://forms.gle/o2oQGGgMTv8RgdyV6" target="_blank" rel="noopener noreferrer">
                   <Button>
-                    Get Started
+                    Join the Waitlist
                   </Button>
                 </Link>
               </>
@@ -154,17 +126,20 @@ export default function HomePage() {
           </div>
 
           <div className="flex justify-center">
-            <Link href="/sign-up">
+            <Link href="https://forms.gle/o2oQGGgMTv8RgdyV6" target="_blank" rel="noopener noreferrer">
               <Button
                 size="lg"
                 className="px-8 py-3 text-lg"
               >
-                Get Started
+                Join the Waitlist
               </Button>
             </Link>
           </div>
         </div>
       </section>
+
+      <FounderMessage />
+      <StatsSection />
 
       {/* Discovery Form Section */}
       <section className="py-16 px-4 bg-background">
@@ -188,117 +163,13 @@ export default function HomePage() {
             </div>
 
             {/* Form */}
-            <Card className="border-border max-w-2xl mx-auto">
-              <CardContent className="p-8">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input
-                      placeholder="First Name *"
-                      value={formData.firstName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                      required
-                      className="border-input"
-                    />
-                    <Input
-                      placeholder="Last Name *"
-                      value={formData.lastName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                      required
-                      className="border-input"
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input
-                      type="email"
-                      placeholder="Email Address *"
-                      value={formData.email}
-                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                      required
-                      className="border-input"
-                    />
-                    <Input
-                      placeholder="LinkedIn URL or Website"
-                      value={formData.linkedinUrl}
-                      onChange={(e) => setFormData(prev => ({ ...prev, linkedinUrl: e.target.value }))}
-                      className="border-input"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-3 block">
-                      Select all that apply *
-                    </label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="leader"
-                          checked={formData.roles.includes('Leader on the Journey')}
-                          onCheckedChange={(checked) => 
-                            handleRoleChange('Leader on the Journey', checked as boolean)
-                          }
-                        />
-                        <label htmlFor="leader" className="text-sm text-foreground">
-                          Leader on the Journey
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="coach"
-                          checked={formData.roles.includes('Executive Coach')}
-                          onCheckedChange={(checked) => 
-                            handleRoleChange('Executive Coach', checked as boolean)
-                          }
-                        />
-                        <label htmlFor="coach" className="text-sm text-foreground">
-                          Executive Coach
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="hr"
-                          checked={formData.roles.includes('HR/People Ops Leader')}
-                          onCheckedChange={(checked) => 
-                            handleRoleChange('HR/People Ops Leader', checked as boolean)
-                          }
-                        />
-                        <label htmlFor="hr" className="text-sm text-foreground">
-                          HR/People Ops Leader
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="other"
-                          checked={formData.roles.includes('Other')}
-                          onCheckedChange={(checked) => 
-                            handleRoleChange('Other', checked as boolean)
-                          }
-                        />
-                        <label htmlFor="other" className="text-sm text-foreground">
-                          Other
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Textarea
-                    placeholder="What's one thing about executive coaching that you wish worked better?"
-                    value={formData.insights}
-                    onChange={(e) => setFormData(prev => ({ ...prev, insights: e.target.value }))}
-                    rows={4}
-                    className="border-input"
-                  />
-
-                  <Button 
-                    type="submit" 
-                    className="w-full"
-                    size="lg"
-                  >
-                    Let's Connect
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+            <div className="text-center">
+              <Link href="https://forms.gle/o2oQGGgMTv8RgdyV6" target="_blank" rel="noopener noreferrer">
+                <Button size="lg" className="px-8 py-3 text-lg">
+                  Join the Waitlist
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -352,7 +223,12 @@ export default function HomePage() {
                     </p>
                   )}
 
-                  <Link href="/sign-up" className="w-full">
+                  <Link
+                    href={tier.cta === 'Join the Waitlist' ? "https://forms.gle/o2oQGGgMTv8RgdyV6" : "/sign-up"}
+                    className="w-full"
+                    target={tier.cta === 'Join the Waitlist' ? "_blank" : undefined}
+                    rel={tier.cta === 'Join the Waitlist' ? "noopener noreferrer" : undefined}
+                  >
                     <Button
                       variant={tier.ctaVariant}
                       className="w-full mt-auto"

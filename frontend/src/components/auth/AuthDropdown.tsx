@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import Link from 'next/link';
+import { SignInButton } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 
 interface AuthDropdownProps {
@@ -16,7 +16,7 @@ export function AuthDropdown({
   className = ''
 }: AuthDropdownProps) {
   return (
-    <Link href="/sign-in">
+    <SignInButton mode="modal">
       <Button
         variant={variant}
         size={size}
@@ -24,6 +24,6 @@ export function AuthDropdown({
       >
         Sign In
       </Button>
-    </Link>
+    </SignInButton>
   );
 }

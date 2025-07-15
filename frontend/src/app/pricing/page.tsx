@@ -22,7 +22,7 @@ export default function PricingPage() {
         "Solo player mode without a coach",
         "Get $50 credit for any client referral that signs up and makes their first payment and $100 for any coach that signs up and makes their first payment"
       ],
-      cta: "Start Free",
+      cta: "Join the Waitlist",
       ctaVariant: "outline" as const
     },
     {

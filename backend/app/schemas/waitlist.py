@@ -1,3 +1,6 @@
+# DEPRECATED: This schema is no longer in use and will be removed in a future update.
+# The functionality has been replaced by the coaching_interest schema and related services.
+
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional, List
 from datetime import datetime

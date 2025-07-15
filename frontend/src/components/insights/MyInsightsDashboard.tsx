@@ -86,7 +86,7 @@ export function MyInsightsDashboard({ onCreateNew, onViewInsight }: MyInsightsDa
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg line-clamp-2">
+            <CardTitle className="text-lg">
               {insight.session_title || insight.title || 'Untitled Insight'}
             </CardTitle>
             <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
@@ -125,7 +125,7 @@ export function MyInsightsDashboard({ onCreateNew, onViewInsight }: MyInsightsDa
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-gray-700 line-clamp-3 mb-4">
+        <p className="text-gray-700 mb-4">
           {insight.session_summary || insight.content || 'No content available'}
         </p>
         

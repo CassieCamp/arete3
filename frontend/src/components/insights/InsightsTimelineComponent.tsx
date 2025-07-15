@@ -182,7 +182,7 @@ export function InsightsTimelineComponent({
               <CardContent className="pt-0">
                 {/* Session Summary */}
                 <div className="mb-4">
-                  <p className="text-sm text-gray-700 line-clamp-2">
+                  <p className="text-sm text-gray-700">
                     {insight.session_summary}
                   </p>
                 </div>

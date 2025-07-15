@@ -19,6 +19,7 @@ from app.api.v1.endpoints.coach import router as coach_router
 from app.api.v1.endpoints.member import router as member_router
 from app.api.v1.endpoints.freemium import router as freemium_router
 from app.api.v1.endpoints.admin import router as admin_router
+from app.api.v1.endpoints.contact import router as contact_router
 from app.api.v1.webhooks.clerk import router as clerk_router
 from app.api.v1.deps import org_required, org_optional
 from app.db.mongodb import connect_to_mongo, close_mongo_connection
@@ -78,6 +79,7 @@ app.include_router(member_router, prefix="/api/v1/member", tags=["member"])
 app.include_router(freemium_router, prefix="/api/v1/freemium", tags=["freemium"])
 app.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
 app.include_router(clerk_router, prefix="/api/v1/webhooks", tags=["webhooks"])
+app.include_router(contact_router, prefix="/api/v1/contact", tags=["contact"])
 
 
 @app.get("/api/v1/health")
