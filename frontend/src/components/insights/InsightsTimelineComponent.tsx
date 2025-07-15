@@ -170,7 +170,7 @@ export function InsightsTimelineComponent({
                     </CardDescription>
                   </div>
                   <div className="text-right">
-                    <div className={`text-sm font-medium ${getQualityColor(insight.overall_session_quality)}`}>
+                    <div className={`text-sm font-medium ${getQualityColor(insight.overall_session_quality ?? '')}`}>
                       {insight.overall_session_quality}
                     </div>
                     <div className="text-xs text-gray-500">
@@ -212,25 +212,25 @@ export function InsightsTimelineComponent({
                 {/* Insight Counts */}
                 <div className="flex items-center justify-between text-xs text-gray-600">
                   <div className="flex space-x-4">
-                    {insight.celebration_count > 0 && (
+                    {(insight.celebration_count ?? 0) > 0 && (
                       <span className="flex items-center space-x-1">
                         <span>🎉</span>
                         <span>{insight.celebration_count} celebration{insight.celebration_count !== 1 ? 's' : ''}</span>
                       </span>
                     )}
-                    {insight.intention_count > 0 && (
+                    {(insight.intention_count ?? 0) > 0 && (
                       <span className="flex items-center space-x-1">
                         <span>🎯</span>
                         <span>{insight.intention_count} intention{insight.intention_count !== 1 ? 's' : ''}</span>
                       </span>
                     )}
-                    {insight.discovery_count > 0 && (
+                    {(insight.discovery_count ?? 0) > 0 && (
                       <span className="flex items-center space-x-1">
                         <span>💡</span>
                         <span>{insight.discovery_count} discover{insight.discovery_count !== 1 ? 'ies' : 'y'}</span>
                       </span>
                     )}
-                    {insight.action_item_count > 0 && (
+                    {(insight.action_item_count ?? 0) > 0 && (
                       <span className="flex items-center space-x-1">
                         <span>✅</span>
                         <span>{insight.action_item_count} action{insight.action_item_count !== 1 ? 's' : ''}</span>
