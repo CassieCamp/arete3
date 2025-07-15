@@ -58,7 +58,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({ reflection }) => {
 
   return (
     <div 
-      className="bg-background/10 backdrop-blur-sm border border-border/20 rounded-lg transition-all duration-300 hover:bg-background/15 cursor-pointer"
+      className="bg-card backdrop-blur-sm border border-border/20 rounded-lg transition-all duration-300 hover:bg-background/15 cursor-pointer"
       onClick={() => setIsExpanded(!isExpanded)}
     >
       {/* Header - Always Visible */}
@@ -94,7 +94,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({ reflection }) => {
           isExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="px-4 pb-4 border-t border-border/20 pt-4 bg-background/5">
+        <div className="px-4 pb-4 border-t border-border/20 pt-4">
           
           {/* Insights by Category */}
           {Object.entries(CATEGORY_CONFIG).map(([categoryKey, config]) => {
@@ -104,12 +104,12 @@ export const InsightCard: React.FC<InsightCardProps> = ({ reflection }) => {
             
             return (
               <div key={categoryKey} className="mb-6 last:mb-4">
-                <h4 className="text-white font-bold text-sm mb-2 flex items-center gap-2">
+                <h4 className="text-card-foreground font-bold text-sm mb-2 flex items-center gap-2">
                   {config.label}
                 </h4>
                 <ul className="space-y-2 ml-4">
                   {categoryInsights.map((insight, index) => (
-                    <li key={index} className="text-white/90 text-sm flex items-start leading-relaxed">
+                    <li key={index} className="text-muted-foreground text-sm flex items-start leading-relaxed">
                       <span className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2 mr-3 flex-shrink-0" />
                       {insight}
                     </li>

@@ -148,7 +148,17 @@ export function InsightDetailView({ insightId, onBack }: InsightDetailViewProps)
   }
 
   return (
-    <div className="space-y-6">
+    <div
+      className="space-y-6"
+      style={{
+        backgroundColor: 'oklch(0.9583 0.0111 89.7230)', // Light cream from design system
+        color: 'oklch(0.2177 0.0356 251.2935)',           // Dark text from design system
+        borderRadius: '12px',
+        padding: '16px',
+        margin: '8px 0',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      }}
+    >
       {/* Header */}
       <Card>
         <CardHeader>
@@ -169,9 +179,9 @@ export function InsightDetailView({ insightId, onBack }: InsightDetailViewProps)
             </div>
             <div className="flex items-center space-x-3">
               <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                insight.overall_session_quality.toLowerCase() === 'excellent' ? 'bg-green-100 text-green-800' :
-                insight.overall_session_quality.toLowerCase() === 'good' ? 'bg-blue-100 text-blue-800' :
-                insight.overall_session_quality.toLowerCase() === 'average' ? 'bg-yellow-100 text-yellow-800' :
+                insight.overall_session_quality?.toLowerCase() === 'excellent' ? 'bg-green-100 text-green-800' :
+                insight.overall_session_quality?.toLowerCase() === 'good' ? 'bg-blue-100 text-blue-800' :
+                insight.overall_session_quality?.toLowerCase() === 'average' ? 'bg-yellow-100 text-yellow-800' :
                 'bg-red-100 text-red-800'
               }`}>
                 {insight.overall_session_quality}

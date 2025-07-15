@@ -145,8 +145,9 @@ export function InsightsTimelineComponent({
       {!loading && insights && insights.insights.length > 0 && (
         <div className="space-y-4">
           {insights.insights.map((insight, index) => (
-            <Card 
-              key={insight.id} 
+            <div style={{backgroundColor: 'oklch(0.9583 0.0111 89.7230)'}}>
+            <Card
+              key={insight.id}
               className="hover:shadow-lg transition-shadow cursor-pointer"
               onClick={() => onInsightSelect(insight.id)}
             >
@@ -240,6 +241,7 @@ export function InsightsTimelineComponent({
                 </div>
               </CardContent>
             </Card>
+            </div>
           ))}
         </div>
       )}

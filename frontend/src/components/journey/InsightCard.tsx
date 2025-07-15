@@ -54,17 +54,23 @@ interface InsightCardProps {
 
 const InsightCard = ({ insight, onExpand, onCategoryFilter }: InsightCardProps) => {
   return (
-    <Card 
-      className="hover:shadow-md transition-all duration-200 cursor-pointer group border-border bg-card"
-      onClick={() => onExpand(insight)}
+    <Card
+      className="hover:shadow-md transition-all duration-200 cursor-pointer group border-border"
+      style={{
+        backgroundColor: 'oklch(0.9583 0.0111 89.7230) !important',
+        color: 'oklch(0.2177 0.0356 251.2935) !important'
+      }}
+      onClick={() => {
+        onExpand(insight);
+      }}
     >
       <CardHeader>
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg text-card-foreground mb-2 line-clamp-2">
+            <h3 className="font-semibold text-lg text-card-foreground mb-2 line-clamp-2" style={{ color: 'oklch(0.2177 0.0356 251.2935)' }}>
               {insight.summary}
             </h3>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3" style={{ color: 'oklch(0.4855 0 0)' }}>
               <span>{formatDistanceToNow(new Date(insight.created_at))} ago</span>
               <span>•</span>
               <span>From {getReflectionTypeLabel(insight.reflection?.type)}</span>
@@ -98,7 +104,7 @@ const InsightCard = ({ insight, onExpand, onCategoryFilter }: InsightCardProps) 
           {insight.key_points?.slice(0, 2).map((point, idx) => (
             <div key={idx} className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0" />
-              <p className="text-sm text-muted-foreground line-clamp-2">{point}</p>
+              <p className="text-sm text-muted-foreground line-clamp-2" style={{ color: 'oklch(0.4855 0 0)' }}>{point}</p>
             </div>
           ))}
           
@@ -106,8 +112,8 @@ const InsightCard = ({ insight, onExpand, onCategoryFilter }: InsightCardProps) 
           {insight.breakthrough_moment && (
             <div className="mt-4 p-3 bg-accent/10 rounded-lg border-l-4 border-accent">
               <div className="flex items-start gap-2">
-                <Lightbulb className="w-4 h-4 text-accent-foreground mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-accent-foreground font-medium">
+                <Lightbulb className="w-4 h-4 text-accent-foreground mt-0.5 flex-shrink-0" style={{ color: 'oklch(0.6087 0.1830 38.3621)' }} />
+                <p className="text-sm text-accent-foreground font-medium" style={{ color: 'oklch(0.2177 0.0356 251.2935)' }}>
                   {insight.breakthrough_moment}
                 </p>
               </div>
@@ -118,7 +124,7 @@ const InsightCard = ({ insight, onExpand, onCategoryFilter }: InsightCardProps) 
       
       <CardFooter>
         <div className="flex justify-between items-center w-full">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground" style={{ color: 'oklch(0.4855 0 0)' }}>
             <span>AI Confidence: {Math.round(insight.confidence_score * 100)}%</span>
             {insight.action_items && insight.action_items.length > 0 && (
               <>
@@ -127,7 +133,7 @@ const InsightCard = ({ insight, onExpand, onCategoryFilter }: InsightCardProps) 
               </>
             )}
           </div>
-          <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" style={{ color: 'oklch(0.4855 0 0)' }} />
         </div>
       </CardFooter>
     </Card>
