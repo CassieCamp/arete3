@@ -33,7 +33,7 @@ export function BottomNavigation({
   }
   
   return (
-    <div className={`fixed bottom-0 left-0 right-0 bg-background border-t border-border px-4 pb-safe z-50 ${className}`}>
+    <div className={`fixed bottom-0 left-0 right-0 bg-background border-t border-border px-4 py-2 z-50 ${className}`}>
       <div className="flex justify-around items-center max-w-md mx-auto">
         {mainNavigation.map((item, index) => {
           const Icon = item.icon;

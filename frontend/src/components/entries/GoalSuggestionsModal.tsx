@@ -45,7 +45,7 @@ export function GoalSuggestionsModal({
       
       toast({
         title: "Goal Added",
-        description: "Successfully added the new goal to your destinations."
+        description: "Successfully added the new goal."
       });
       onClose();
     } catch (error) {
@@ -86,7 +86,7 @@ export function GoalSuggestionsModal({
         
         <div className="space-y-4">
           <p className="text-gray-600">
-            Our AI detected potential goals in your entry. Select the ones you'd like to add to your destinations:
+            Our AI detected potential goals in your entry. Select the ones you'd like to add:
           </p>
           
           <div className="space-y-3 max-h-96 overflow-y-auto">

@@ -42,7 +42,7 @@ export default function CoachingPage() {
   const hasError = relationshipsError || settingsError;
 
   return (
-    <AppLayout>
+    <AppLayout suppressBottomNav={true}>
       <ThreeIconNav />
       <div className="container mx-auto px-4 py-8 md:pt-20 pb-20">
         <PageHeader

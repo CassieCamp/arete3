@@ -8,7 +8,6 @@ const isProtectedRoute = createRouteMatcher([
   '/goals(.*)',
   '/insights(.*)',
   '/journey(.*)',
-  '/mountain(.*)',
   '/center(.*)',
   '/connections(.*)',
   '/settings(.*)',

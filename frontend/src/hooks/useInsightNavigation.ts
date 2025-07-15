@@ -1,7 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { sessionInsightService, SessionInsight } from '@/services/sessionInsightService';
+// import { sessionInsightService, SessionInsight } from '@/services/sessionInsightService';  // REMOVED: service deprecated
 import { useEntryService, Entry } from '@/services/entryService';
+
+// Local type definition to replace deprecated SessionInsight
+interface SessionInsight {
+  id: string;
+  client_user_id: string;
+  session_date: string;
+  session_title: string;
+  key_themes: string[];
+  status: string;
+  created_at: string;
+  title: string;
+  content: string | undefined;
+}
 import { useAuth as useClerkAuth, useUser } from '@clerk/nextjs';
 
 export interface UseInsightNavigationResult {

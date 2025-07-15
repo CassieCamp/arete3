@@ -348,7 +348,7 @@ async def accept_detected_goals(
     user_info: dict = Depends(org_optional)
 ):
     """
-    Accept detected goals from an entry and convert them to destinations.
+    Accept detected goals from an entry.
     """
     try:
         current_user_id = user_info['clerk_user_id']

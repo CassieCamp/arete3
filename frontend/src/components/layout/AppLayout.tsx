@@ -8,6 +8,7 @@ import { NavigationProvider } from '@/components/navigation/NavigationProvider';
 
 interface AppLayoutProps {
   children: ReactNode;
+  suppressBottomNav?: boolean;
 }
 
 // Utility function to determine active tab based on pathname
@@ -16,6 +17,8 @@ function getActiveTab(pathname: string): 'mountain' | 'microphone' | 'compass' |
     return 'mountain';
   } else if (pathname.includes('/member/center') || pathname.includes('/center')) {
     return 'center';
+  } else if (pathname.includes('/member/coaching') || pathname.includes('/coaching')) {
+    return 'compass';
   } else if (pathname.includes('/coach')) {
     return 'compass';
   } else {
@@ -24,7 +27,7 @@ function getActiveTab(pathname: string): 'mountain' | 'microphone' | 'compass' |
   }
 }
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({ children, suppressBottomNav = false }: AppLayoutProps) {
   const pathname = usePathname();
   const activeTab = getActiveTab(pathname);
 
@@ -35,16 +38,18 @@ export function AppLayout({ children }: AppLayoutProps) {
         <TopNav activeTab={activeTab} />
         
         {/* Main Content */}
-        <main className="py-6 pb-20 md:pb-6">
+        <main className={`py-6 ${suppressBottomNav ? 'pb-6' : 'pb-20 md:pb-6'}`}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             {children}
           </div>
         </main>
         
-        {/* Bottom Navigation - Mobile only */}
-        <div className="md:hidden">
-          <BottomNavigation activeTab={activeTab} />
-        </div>
+        {/* Bottom Navigation - Mobile only, conditionally rendered */}
+        {!suppressBottomNav && (
+          <div className="md:hidden">
+            <BottomNavigation activeTab={activeTab} />
+          </div>
+        )}
       </div>
     </NavigationProvider>
   );

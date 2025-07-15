@@ -208,23 +208,7 @@ class EntryService:
             success = await self.entry_repository.accept_detected_goals(entry_id, accepted_goal_indices)
             
             if success:
-                # Create destinations from accepted goals
-                from app.services.destination_service import DestinationService
-                destination_service = DestinationService()
-                
-                for i in accepted_goal_indices:
-                    if i < len(entry.detected_goals):
-                        detected_goal = entry.detected_goals[i]
-                        destination_data = {
-                            "destination_statement": detected_goal.goal_statement,
-                            "success_vision": "AI-generated goal from entry analysis",
-                            "ai_suggested": True,
-                            "source_entries": [str(entry.id)],
-                            "priority": "medium",
-                            "category": "personal"
-                        }
-                        
-                        await destination_service.create_destination(user_id, destination_data)
+                # Create destinations from accepted goals - REMOVED: destination functionality deprecated
                 
                 logger.info(f"✅ Successfully accepted {len(accepted_goal_indices)} goals")
             

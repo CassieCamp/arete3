@@ -419,15 +419,11 @@ async def get_client_insights(
         entry_repo = EntryRepository()
         entries = await entry_repo.get_entries_by_user(client_id, limit=10)
         
-        # Get client destinations
-        from app.repositories.destination_repository import DestinationRepository
-        destination_repo = DestinationRepository()
-        destinations = await destination_repo.get_destinations_by_user(client_id)
+        # Get client destinations - REMOVED: destination functionality deprecated
         
         return {
             "client_id": client_id,
             "recent_entries": entries,
-            "destinations": destinations,
             "entries_count": await entry_repo.get_entries_count_by_user(client_id)
         }
         

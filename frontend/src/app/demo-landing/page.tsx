@@ -108,7 +108,7 @@ export default function DemoLandingPage() {
       
       {/* Bottom Navigation */}
       <BottomNavigation
-        activeTab="mountain"
+        activeTab="center"
       />
     </div>
   );

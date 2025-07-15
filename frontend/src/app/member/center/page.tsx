@@ -91,13 +91,6 @@ export default function CenterPage() {
       href: null // Placeholder - no link yet
     },
     {
-      id: "destinations",
-      title: "Destinations",
-      description: "Set and track your goals and aspirations",
-      icon: MapPin,
-      href: null // Placeholder - no link yet
-    },
-    {
       id: "documents",
       title: "Documents",
       description: "Upload and manage your coaching documents",
@@ -213,7 +206,7 @@ export default function CenterPage() {
   }, []);
 
   return (
-    <AppLayout>
+    <AppLayout suppressBottomNav={true}>
       <style jsx>{scrollbarStyle}</style>
       <ThreeIconNav />
       <div className="container mx-auto px-4 py-8 md:pt-20 pb-20">

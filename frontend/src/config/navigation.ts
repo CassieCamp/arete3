@@ -18,7 +18,7 @@ import { PracticeIcon } from '@/components/icons/PracticeIcon';
 
 // Main navigation items interface
 export interface MainNavigationItem {
-  id: 'mountain' | 'microphone' | 'compass' | 'basecamp' | 'console' | 'practice' | 'clients' | 'organizations' | 'journey' | 'profile';
+  id: 'microphone' | 'compass' | 'console' | 'practice' | 'clients' | 'organizations' | 'journey' | 'profile';
   icon: LucideIcon;
   label: string;
   description: string;

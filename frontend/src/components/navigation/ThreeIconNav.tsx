@@ -5,67 +5,18 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useUser, UserButton } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Route, Users, BarChart3 } from 'lucide-react';
-import { CaveIcon } from '@/components/icons/CaveIcon';
-import { RippleIcon } from '@/components/icons/RippleIcon';
-import { CoachIcon } from '@/components/icons/CoachIcon';
-import { PracticeIcon } from '@/components/icons/PracticeIcon';
 import { AuthDropdown } from '@/components/auth/AuthDropdown';
+import { useNavigation } from './NavigationProvider';
 
 interface ThreeIconNavProps {
   className?: string;
 }
 
-// Navigation items specifically for the three-icon nav
-const ALL_NAV_ITEMS = [
-  {
-    id: 'journey',
-    icon: Route,
-    label: 'Journey',
-    href: '/member/journey',
-    roles: ['client'] as ('client' | 'coach')[] // Only show for clients
-  },
-  {
-    id: 'center',
-    icon: CaveIcon as any,
-    label: 'Center',
-    href: '/member/center',
-    roles: ['client'] as ('client' | 'coach')[] // Only show for clients
-  },
-  {
-    id: 'coaching',
-    icon: CoachIcon as any,
-    label: 'Coaching',
-    href: '/member/coaching',
-    roles: ['client'] as ('client' | 'coach')[] // Only show for clients
-  },
-  {
-    id: 'practice',
-    icon: PracticeIcon as any,
-    label: 'Practice',
-    href: '/coach/practice',
-    roles: ['coach'] as ('client' | 'coach')[] // Only show for coaches
-  },
-  {
-    id: 'clients',
-    icon: RippleIcon as any,
-    label: 'Clients',
-    href: '/coach/clients',
-    roles: ['coach'] as ('client' | 'coach')[] // Only show for coaches
-  },
-  {
-    id: 'profile',
-    icon: CoachIcon as any,
-    label: 'Profile',
-    href: '/coach/profile',
-    roles: ['client', 'coach'] as ('client' | 'coach')[] // Show for both
-  }
-];
-
 export function ThreeIconNav({ className = "" }: ThreeIconNavProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, isLoaded } = useUser();
+  const { mainNavigation, isLoading } = useNavigation();
 
   const handleNavigation = (href: string) => {
     router.push(href);
@@ -76,21 +27,13 @@ export function ThreeIconNav({ className = "" }: ThreeIconNavProps) {
   };
 
   // Don't render anything until the user data is loaded
-  if (!isLoaded) {
+  if (!isLoaded || isLoading) {
     return null;
   }
 
-  // Get user role from Clerk's publicMetadata
-  const userRole = user?.publicMetadata?.primary_role as string;
-  const legacyRole = userRole === 'coach' ? 'coach' : 'client';
-
-  // Filter navigation items based on user role
-  const NAV_ITEMS = ALL_NAV_ITEMS.filter(item => {
-    if (!legacyRole) {
-      return false;
-    }
-    return item.roles.includes(legacyRole);
-  });
+  // Use navigation items from the centralized NavigationProvider
+  // This ensures consistency with the role-based navigation configuration
+  const NAV_ITEMS = mainNavigation;
 
   return (
     <>
@@ -113,14 +56,14 @@ export function ThreeIconNav({ className = "" }: ThreeIconNavProps) {
           <div className="flex justify-center items-center gap-8">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-            const active = isActive(item.href);
+            const active = isActive(item.href || '#');
             
             return (
               <Button
                 key={item.id}
                 variant="ghost"
                 size="sm"
-                onClick={() => handleNavigation(item.href)}
+                onClick={() => handleNavigation(item.href || '#')}
                 className={cn(
                   "flex flex-col items-center gap-1 p-3 h-auto transition-all duration-200",
                   active
@@ -160,14 +103,14 @@ export function ThreeIconNav({ className = "" }: ThreeIconNavProps) {
         <div className="flex justify-around items-center max-w-md mx-auto">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-            const active = isActive(item.href);
+            const active = isActive(item.href || '#');
             
             return (
               <Button
                 key={item.id}
                 variant="ghost"
                 size="lg"
-                onClick={() => handleNavigation(item.href)}
+                onClick={() => handleNavigation(item.href || '#')}
                 className={cn(
                   "p-3 rounded-full transition-all duration-200 flex flex-col items-center gap-1",
                   active

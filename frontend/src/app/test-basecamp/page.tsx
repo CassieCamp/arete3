@@ -1,6 +1,6 @@
 "use client";
 
-import { CenterTab } from '@/components/mountain/CenterTab';
+// import { CenterTab } from '@/components/mountain/CenterTab';  // REMOVED: component deprecated
 
 // Mock AuthContext for testing
 const MockAuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -33,7 +33,10 @@ export default function TestCenterPage() {
           </div>
 
           <div className="w-full max-w-4xl mx-auto">
-            <CenterTab />
+            {/* <CenterTab /> */}
+            <div className="text-center text-gray-600 dark:text-gray-300">
+              Center component temporarily unavailable
+            </div>
           </div>
         </div>
       </div>
