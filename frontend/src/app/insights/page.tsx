@@ -12,6 +12,7 @@ import { InsightDetailView } from "@/components/insights/InsightDetailView";
 import { MyInsightsDashboard } from "@/components/insights/MyInsightsDashboard";
 import { UnpairedInsightUpload } from "@/components/insights/UnpairedInsightUpload";
 import { PageHeader } from "@/components/navigation/NavigationUtils";
+import BackgroundShape from "@/components/journey/BackgroundShape";
 
 interface CoachingRelationship {
   id: string;
@@ -399,10 +400,15 @@ export default function SessionInsightsPage() {
               </Button>
             </div>
             
-            <InsightDetailView
-              insightId={selectedInsight}
-              onBack={selectedRelationship ? handleBackToTimeline : handleBackToMyInsights}
-            />
+            <div className="relative">
+              <BackgroundShape isExpanded={true} position="detail" />
+              <div className="relative z-10">
+                <InsightDetailView
+                  insightId={selectedInsight}
+                  onBack={selectedRelationship ? handleBackToTimeline : handleBackToMyInsights}
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>
