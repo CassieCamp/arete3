@@ -24,27 +24,29 @@ const FounderMessage: React.FC = () => {
           </div>
           
           {/* --- Closing Unit --- */}
-          <div className="mt-12 pt-8 border-t border-border/50 flex flex-col sm:flex-row items-center gap-6 sm:gap-8 text-center sm:text-left">
-            <div className="w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0">
-              <Image
-                src="/images/founder-headshot.jpg"
-                alt="Cassie Campbell"
-                width={112}
-                height={112}
-                className="rounded-full object-cover object-[center_35%] w-full h-full shadow-md"
-              />
-            </div>
-            <div className="flex flex-col items-center sm:items-start">
-              <p className="font-mono text-2xl text-foreground">
-                -Cassie
-              </p>
-              <div className="mt-4 flex items-center gap-4">
-                <a href="https://cassiecamp.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
-                  <WebsiteIcon className="w-6 h-6" />
-                </a>
-                <a href="https://www.linkedin.com/in/cassandracampbell/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
-                  <LinkedInIcon className="w-6 h-6" />
-                </a>
+          <div className="mt-12 pt-8 border-t border-border/50 flex justify-end">
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="font-mono text-2xl text-foreground">
+                  -Cassie
+                </p>
+                <div className="mt-2 flex items-center justify-end gap-4">
+                  <a href="https://cassiecamp.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
+                    <WebsiteIcon className="w-6 h-6" />
+                  </a>
+                  <a href="https://www.linkedin.com/in/cassandracampbell/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
+                    <LinkedInIcon className="w-6 h-6" />
+                  </a>
+                </div>
+              </div>
+              <div className="w-24 h-24 flex-shrink-0">
+                <Image
+                  src="/images/founder-headshot.jpg"
+                  alt="Cassie Campbell"
+                  width={96}
+                  height={96}
+                  className="rounded-full object-cover object-[center_35%] w-full h-full shadow-md"
+                />
               </div>
             </div>
           </div>

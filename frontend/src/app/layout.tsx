@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Arete - Personal Development Platform',
-  description: 'Transform your potential into achievement with personalized coaching and insights.',
+  description: 'The coaching app of my dreams',
 }
 
 export default function RootLayout({

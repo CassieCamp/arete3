@@ -19,7 +19,7 @@ export function UnconnectedState() {
             Welcome to Coaching
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Transform your potential into achievement with personalized coaching. 
+            The coaching app of my dreams.
             Connect with experienced coaches who will guide you toward your goals 
             with tailored strategies and ongoing support.
           </p>
