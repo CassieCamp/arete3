@@ -69,8 +69,9 @@ app.include_router(entries_router, prefix="/api/v1/entries", tags=["entries"])
 app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
 app.include_router(discovery_form_router, prefix="/api/v1/discovery-form", tags=["discovery-form"])
 app.include_router(quotes_router, prefix="/api/v1", tags=["quotes"])
-app.include_router(journey_router, prefix="/api/v1/journey", tags=["journey"])
+# Clear separation - no overlapping paths
 app.include_router(reflections_router, prefix="/api/v1/reflections", tags=["reflections"])
+app.include_router(journey_router, prefix="/api/v1/journey", tags=["journey"])
 
 app.include_router(coach_router, prefix="/api/v1/coach", tags=["coach"])
 app.include_router(member_router, prefix="/api/v1/member", tags=["member"])

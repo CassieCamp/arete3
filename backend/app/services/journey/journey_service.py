@@ -11,7 +11,7 @@ import logging
 from app.models.journey.reflection import ReflectionSource
 from app.models.journey.insight import Insight
 from app.models.journey.enums import CategoryType, ReviewStatus
-from app.repositories.journey.reflection_repository import ReflectionRepository
+from app.repositories.journey.reflection_repository import ReflectionSourceRepository
 from app.repositories.journey.insight_repository import InsightRepository
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class JourneyService:
     """Service class containing core business logic for the Journey System"""
     
-    def __init__(self, reflection_repository: ReflectionRepository, insight_repository: InsightRepository):
+    def __init__(self, reflection_repository: ReflectionSourceRepository, insight_repository: InsightRepository):
         """Initialize the service with repository instances"""
         self.reflection_repo = reflection_repository
         self.insight_repo = insight_repository

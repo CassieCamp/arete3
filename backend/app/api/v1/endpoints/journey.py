@@ -14,7 +14,7 @@ from app.schemas.journey import (
     InsightCreateRequest, InsightResponse, JourneyFeedResponse, JourneyFeedItem
 )
 from app.services.journey.journey_service import JourneyService
-from app.repositories.journey.reflection_repository import ReflectionRepository
+from app.repositories.journey.reflection_repository import ReflectionSourceRepository
 from app.repositories.journey.insight_repository import InsightRepository
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ router = APIRouter()
 
 def get_journey_service() -> JourneyService:
     """Dependency to get JourneyService instance"""
-    reflection_repo = ReflectionRepository()
+    reflection_repo = ReflectionSourceRepository()
     insight_repo = InsightRepository()
     return JourneyService(reflection_repo, insight_repo)
 

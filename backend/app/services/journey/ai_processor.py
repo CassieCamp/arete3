@@ -1,395 +1,208 @@
 """
 AI Processing Service for Journey System
 
-This module contains the ReflectionProcessor class which handles all AI-related
-processing tasks for reflections and insights generation.
+This module contains AI processing functions for analyzing reflection documents
+and generating categorized insights.
 """
 
+import json
 import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
-# Placeholder classes for dependencies
-class OpenAIClient:
-    """Placeholder OpenAI client for AI processing"""
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-    
-    def chat_completion(self, messages: List[Dict], model: str = "gpt-4") -> Dict:
-        """Placeholder method for OpenAI chat completion"""
-        self.logger.info(f"Mock OpenAI chat completion called with model: {model}")
-        return {"choices": [{"message": {"content": "Mock AI response"}}]}
+from app.services.ai_service import AIService
+from app.models.journey.reflection import DocumentAnalysis
+from app.models.journey.enums import CategoryType
 
-class MonitoringService:
-    """Placeholder monitoring service for tracking AI operations"""
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-    
-    def track_processing_start(self, reflection_id: str):
-        """Track the start of reflection processing"""
-        self.logger.info(f"Processing started for reflection: {reflection_id}")
-    
-    def track_processing_complete(self, reflection_id: str, duration: float):
-        """Track the completion of reflection processing"""
-        self.logger.info(f"Processing completed for reflection: {reflection_id} in {duration}s")
-    
-    def track_error(self, reflection_id: str, error: str):
-        """Track processing errors"""
-        self.logger.error(f"Processing error for reflection {reflection_id}: {error}")
+logger = logging.getLogger(__name__)
 
+# Map the 4 specified categories to our CategoryType enum
+INSIGHT_CATEGORIES = {
+    "Understanding Myself": [CategoryType.PERSONAL_GROWTH, CategoryType.VALUES, CategoryType.MINDSET],
+    "Navigating Relationships": [CategoryType.RELATIONSHIPS, CategoryType.COMMUNICATION, CategoryType.LEADERSHIP],
+    "Optimizing Performance": [CategoryType.GOALS_ACHIEVEMENT, CategoryType.HABITS, CategoryType.LEARNING],
+    "Making Progress": [CategoryType.CHALLENGES, CategoryType.CELEBRATIONS, CategoryType.PURPOSE]
+}
 
-class ReflectionProcessor:
+async def analyze_text_for_insights(text: str) -> DocumentAnalysis:
     """
-    Core AI processor for the Journey System.
+    Analyze text content and generate categorized insights using AI.
     
-    This class handles the complete AI processing pipeline for reflections,
-    including document analysis, content categorization, insight generation,
-    connection discovery, validation, and persistence.
+    This function uses the AI service to analyze reflection text and extract insights
+    based on four specific categories:
+    1. Understanding Myself (self-awareness, emotional shifts, values alignment)
+    2. Navigating Relationships (interpersonal growth, politics, leadership influence)
+    3. Optimizing Performance (energy patterns, strengths, effectiveness)
+    4. Making Progress (goals, accountability, wins, forward motion)
+    
+    Args:
+        text: The extracted text content to analyze
+        
+    Returns:
+        DocumentAnalysis: AI-generated analysis with categorized insights
+        
+    Raises:
+        Exception: If AI processing fails
+    """
+    try:
+        logger.info(f"Starting AI analysis for text content (length: {len(text)})")
+        
+        # Initialize AI service
+        ai_service = AIService()
+        
+        # Build the analysis prompt
+        prompt = _build_insight_analysis_prompt(text)
+        
+        # Call AI service to generate JSON response
+        analysis_result = await _call_ai_for_insights(ai_service, prompt)
+        
+        # Create DocumentAnalysis object from AI response
+        document_analysis = DocumentAnalysis(
+            summary=analysis_result.get("summary", ""),
+            key_themes=analysis_result.get("key_themes", []),
+            sentiment=analysis_result.get("sentiment", "neutral"),
+            sentiment_score=analysis_result.get("sentiment_score", 0.0),
+            entities=analysis_result.get("entities", {})
+        )
+        
+        logger.info("✅ Successfully generated AI insights")
+        return document_analysis
+        
+    except Exception as e:
+        logger.error(f"❌ Error in AI insight analysis: {e}")
+        raise Exception(f"AI insight generation failed: {str(e)}")
+
+def _build_insight_analysis_prompt(text: str) -> str:
+    """
+    Build the AI prompt for insight analysis based on the 4 specified categories.
+    
+    Args:
+        text: The text content to analyze
+        
+    Returns:
+        str: Formatted prompt for AI analysis
     """
     
-    def __init__(self, openai_client: OpenAIClient, monitoring_service: MonitoringService):
-        """
-        Initialize the ReflectionProcessor with required dependencies.
-        
-        Args:
-            openai_client: Client for OpenAI API interactions
-            monitoring_service: Service for tracking processing metrics
-        """
-        self.openai_client = openai_client
-        self.monitoring_service = monitoring_service
-        self.logger = logging.getLogger(__name__)
-    
-    def process_reflection(self, reflection_id: str) -> Dict[str, Any]:
-        """
-        Process a reflection through the complete AI pipeline.
-        
-        This method orchestrates the full AI processing workflow:
-        1. Retrieve reflection data
-        2. Analyze document content (if applicable)
-        3. Categorize content themes
-        4. Generate insights
-        5. Discover connections to other reflections
-        6. Validate generated insights
-        7. Persist insights to database
-        8. Mark processing as complete
-        
-        Args:
-            reflection_id: Unique identifier for the reflection to process
-            
-        Returns:
-            Dict containing processing results and generated insights
-        """
-        start_time = datetime.now()
-        self.monitoring_service.track_processing_start(reflection_id)
-        
-        try:
-            # Step 1: Retrieve reflection data
-            reflection = self._get_reflection(reflection_id)
-            
-            # Step 2: Analyze document content if applicable
-            document_analysis = None
-            if reflection.get('has_document'):
-                document_analysis = self._analyze_document(reflection)
-            
-            # Step 3: Categorize content themes
-            categories = self._categorize_content(reflection, document_analysis)
-            
-            # Step 4: Generate insights
-            insights = self._generate_insights(reflection, categories, document_analysis)
-            
-            # Step 5: Discover connections to other reflections
-            connections = self._discover_connections(reflection_id, insights)
-            
-            # Step 6: Validate generated insights
-            validated_insights = self._validate_insights(insights, connections)
-            
-            # Step 7: Persist insights to database
-            persisted_data = self._persist_insights(reflection_id, validated_insights, connections)
-            
-            # Step 8: Mark processing as complete
-            self._mark_processing_complete(reflection_id)
-            
-            # Track successful completion
-            duration = (datetime.now() - start_time).total_seconds()
-            self.monitoring_service.track_processing_complete(reflection_id, duration)
-            
-            return {
-                "reflection_id": reflection_id,
-                "status": "completed",
-                "insights_generated": len(validated_insights),
-                "connections_found": len(connections),
-                "processing_duration": duration,
-                "data": persisted_data
-            }
-            
-        except Exception as e:
-            self.monitoring_service.track_error(reflection_id, str(e))
-            self.logger.error(f"Error processing reflection {reflection_id}: {str(e)}")
-            raise
-    
-    def _get_reflection(self, reflection_id: str) -> Dict[str, Any]:
-        """
-        Retrieve reflection data from the database.
-        
-        Args:
-            reflection_id: Unique identifier for the reflection
-            
-        Returns:
-            Dict containing reflection data
-        """
-        self.logger.info(f"Retrieving reflection data for ID: {reflection_id}")
-        
-        # Placeholder implementation - would integrate with reflection repository
-        return {
-            "id": reflection_id,
-            "user_id": "mock_user_id",
-            "content": "Mock reflection content",
-            "has_document": False,
-            "created_at": datetime.now().isoformat(),
-            "metadata": {}
-        }
-    
-    def _analyze_document(self, reflection: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Analyze document content using AI to extract key themes and insights.
-        
-        This method contains the detailed prompt for document analysis as specified
-        in the project plan.
-        
-        Args:
-            reflection: Reflection data containing document information
-            
-        Returns:
-            Dict containing document analysis results
-        """
-        self.logger.info(f"Analyzing document for reflection: {reflection['id']}")
-        
-        # Detailed AI prompt for document analysis
-        analysis_prompt = """
-        You are an expert coach and reflection analyst. Analyze the following document content 
-        from a user's reflection and provide comprehensive insights.
-        
-        ANALYSIS FRAMEWORK:
-        1. CONTENT THEMES: Identify the main themes, topics, and subjects discussed
-        2. EMOTIONAL PATTERNS: Detect emotional states, mood patterns, and sentiment shifts
-        3. GROWTH INDICATORS: Highlight signs of personal growth, learning, or development
-        4. CHALLENGES IDENTIFIED: Extract mentioned obstacles, difficulties, or concerns
-        5. STRENGTHS REVEALED: Identify personal strengths, skills, or positive attributes
-        6. ACTION ITEMS: Detect any goals, intentions, or planned actions mentioned
-        7. REFLECTION DEPTH: Assess the level of self-awareness and introspection
-        8. RECURRING PATTERNS: Identify any repeated themes or cyclical thoughts
-        
-        DOCUMENT CONTENT:
-        {document_content}
-        
-        REFLECTION CONTEXT:
-        {reflection_context}
-        
-        Please provide a structured analysis covering all framework areas. Focus on actionable 
-        insights that can help the user understand their patterns and support their growth journey.
-        
-        Format your response as a JSON object with the following structure:
-        {{
-            "themes": ["theme1", "theme2", ...],
-            "emotional_patterns": {{
-                "dominant_emotions": ["emotion1", "emotion2"],
-                "sentiment_score": 0.0,
-                "emotional_journey": "description"
-            }},
-            "growth_indicators": ["indicator1", "indicator2", ...],
-            "challenges": ["challenge1", "challenge2", ...],
-            "strengths": ["strength1", "strength2", ...],
-            "action_items": ["action1", "action2", ...],
-            "reflection_depth_score": 0.0,
-            "recurring_patterns": ["pattern1", "pattern2", ...],
-            "key_insights": ["insight1", "insight2", ...],
-            "recommendations": ["rec1", "rec2", ...]
-        }}
-        """
-        
-        # Mock AI call - in real implementation, this would call OpenAI
-        messages = [
-            {"role": "system", "content": "You are an expert reflection analyst."},
-            {"role": "user", "content": analysis_prompt.format(
-                document_content=reflection.get('document_content', ''),
-                reflection_context=reflection.get('content', '')
-            )}
+    return f"""
+You are an expert coach and reflection analyst. Analyze the following text and generate insights based on ONLY the four specific categories below. Only generate insights for categories where you find highly relevant content.
+
+TEXT TO ANALYZE:
+{text}
+
+ANALYSIS CATEGORIES (only generate insights for categories with highly relevant content):
+
+1. **Understanding Myself**: Self-awareness, emotional shifts, values alignment, personal identity, inner growth
+2. **Navigating Relationships**: Interpersonal growth, workplace politics, leadership influence, communication patterns, social dynamics
+3. **Optimizing Performance**: Energy patterns, strengths utilization, effectiveness strategies, productivity, skill development
+4. **Making Progress**: Goals achievement, accountability systems, wins and celebrations, forward motion, milestone tracking
+
+INSTRUCTIONS:
+- Only generate insights for categories where the text contains substantial, relevant content
+- Each insight should be specific, actionable, and evidence-based
+- Focus on patterns, growth opportunities, and actionable observations
+- Provide a concise summary of the overall document
+- Identify key themes that emerge from the text
+- Assess overall sentiment and provide a numerical score (-1.0 to 1.0)
+- Extract named entities (people, places, organizations, concepts)
+
+Generate a JSON response with this exact structure:
+
+{{
+    "summary": "2-3 sentence summary of the document's main content and purpose",
+    "key_themes": ["theme1", "theme2", "theme3"],
+    "sentiment": "positive/negative/neutral",
+    "sentiment_score": 0.0,
+    "entities": {{
+        "people": ["person1", "person2"],
+        "places": ["place1", "place2"],
+        "organizations": ["org1", "org2"],
+        "concepts": ["concept1", "concept2"]
+    }},
+    "categorized_insights": {{
+        "Understanding Myself": [
+            {{
+                "insight": "Specific insight about self-awareness or values",
+                "evidence": "Supporting evidence from the text",
+                "confidence": 0.85
+            }}
+        ],
+        "Navigating Relationships": [
+            {{
+                "insight": "Specific insight about relationships or communication",
+                "evidence": "Supporting evidence from the text",
+                "confidence": 0.90
+            }}
+        ],
+        "Optimizing Performance": [
+            {{
+                "insight": "Specific insight about performance or effectiveness",
+                "evidence": "Supporting evidence from the text",
+                "confidence": 0.75
+            }}
+        ],
+        "Making Progress": [
+            {{
+                "insight": "Specific insight about goals or progress",
+                "evidence": "Supporting evidence from the text",
+                "confidence": 0.80
+            }}
         ]
-        
-        ai_response = self.openai_client.chat_completion(messages)
-        
-        # Mock analysis result
-        return {
-            "themes": ["personal_growth", "career_development", "relationships"],
-            "emotional_patterns": {
-                "dominant_emotions": ["optimism", "uncertainty"],
-                "sentiment_score": 0.6,
-                "emotional_journey": "Shows progression from uncertainty to clarity"
-            },
-            "growth_indicators": ["increased_self_awareness", "goal_setting"],
-            "challenges": ["time_management", "work_life_balance"],
-            "strengths": ["resilience", "adaptability"],
-            "action_items": ["create_daily_routine", "schedule_regular_check_ins"],
-            "reflection_depth_score": 0.8,
-            "recurring_patterns": ["perfectionism", "self_doubt"],
-            "key_insights": ["Values alignment is crucial", "Need for structured approach"],
-            "recommendations": ["Practice mindfulness", "Set smaller milestones"]
-        }
+    }}
+}}
+
+CRITICAL: Only include categories in "categorized_insights" where you find highly relevant content. Empty categories should be omitted entirely from the response.
+
+Return only valid JSON matching the exact structure above.
+"""
+
+async def _call_ai_for_insights(ai_service: AIService, prompt: str) -> Dict[str, Any]:
+    """
+    Call the AI service to generate insights from the prompt.
     
-    def _categorize_content(self, reflection: Dict[str, Any], document_analysis: Optional[Dict[str, Any]] = None) -> List[str]:
-        """
-        Categorize reflection content into thematic categories.
+    Args:
+        ai_service: Initialized AI service instance
+        prompt: The analysis prompt
         
-        Args:
-            reflection: Reflection data
-            document_analysis: Optional document analysis results
+    Returns:
+        Dict containing the AI analysis results
+        
+    Raises:
+        Exception: If AI call fails
+    """
+    try:
+        # Use the existing AI service method for JSON responses
+        if hasattr(ai_service, '_call_anthropic') and ai_service.anthropic_client:
+            response = await ai_service._call_anthropic(prompt)
+        elif hasattr(ai_service, '_call_openai') and ai_service.openai_client:
+            response = await ai_service._call_openai(prompt)
+        else:
+            raise Exception("No AI provider available")
             
-        Returns:
-            List of category labels
-        """
-        self.logger.info(f"Categorizing content for reflection: {reflection['id']}")
+        return response
         
-        # Placeholder implementation
-        categories = ["personal_development", "goal_setting", "emotional_processing"]
-        
-        if document_analysis:
-            categories.extend(document_analysis.get("themes", []))
-        
-        return list(set(categories))  # Remove duplicates
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse AI response as JSON: {e}")
+        raise Exception("AI returned invalid JSON response")
+    except Exception as e:
+        logger.error(f"AI service call failed: {e}")
+        raise Exception(f"AI processing error: {str(e)}")
+
+def _map_categories_to_enum(categorized_insights: Dict[str, List[Dict]]) -> List[CategoryType]:
+    """
+    Map the 4 insight categories to CategoryType enum values.
     
-    def _generate_insights(self, reflection: Dict[str, Any], categories: List[str], 
-                          document_analysis: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
-        """
-        Generate AI-powered insights from reflection content.
+    Args:
+        categorized_insights: Dictionary of insights by category
         
-        Args:
-            reflection: Reflection data
-            categories: Content categories
-            document_analysis: Optional document analysis results
-            
-        Returns:
-            List of generated insights
-        """
-        self.logger.info(f"Generating insights for reflection: {reflection['id']}")
-        
-        # Placeholder implementation
-        insights = [
-            {
-                "id": f"insight_{reflection['id']}_1",
-                "type": "pattern_recognition",
-                "content": "You show consistent growth in self-awareness",
-                "confidence": 0.85,
-                "categories": categories[:2],
-                "supporting_evidence": ["Regular reflection practice", "Depth of analysis"]
-            },
-            {
-                "id": f"insight_{reflection['id']}_2",
-                "type": "recommendation",
-                "content": "Consider setting specific measurable goals",
-                "confidence": 0.75,
-                "categories": ["goal_setting"],
-                "supporting_evidence": ["Mentions of wanting change", "Lack of specific targets"]
-            }
-        ]
-        
-        return insights
+    Returns:
+        List of CategoryType enum values
+    """
+    categories = []
     
-    def _discover_connections(self, reflection_id: str, insights: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Discover connections between this reflection and other user reflections.
-        
-        Args:
-            reflection_id: Current reflection ID
-            insights: Generated insights for this reflection
-            
-        Returns:
-            List of discovered connections
-        """
-        self.logger.info(f"Discovering connections for reflection: {reflection_id}")
-        
-        # Placeholder implementation
-        connections = [
-            {
-                "related_reflection_id": "reflection_123",
-                "connection_type": "theme_similarity",
-                "strength": 0.8,
-                "description": "Both reflections focus on career development",
-                "shared_themes": ["career_growth", "goal_setting"]
-            },
-            {
-                "related_reflection_id": "reflection_456",
-                "connection_type": "emotional_pattern",
-                "strength": 0.6,
-                "description": "Similar emotional journey from uncertainty to clarity",
-                "shared_patterns": ["uncertainty", "growth_mindset"]
-            }
-        ]
-        
-        return connections
+    for category_name, insights in categorized_insights.items():
+        if insights:  # Only include categories that have insights
+            if category_name in INSIGHT_CATEGORIES:
+                # Add the first mapped category type for each insight category
+                categories.extend(INSIGHT_CATEGORIES[category_name][:1])
     
-    def _validate_insights(self, insights: List[Dict[str, Any]], 
-                          connections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Validate generated insights for quality and relevance.
-        
-        Args:
-            insights: Generated insights to validate
-            connections: Discovered connections for context
-            
-        Returns:
-            List of validated insights
-        """
-        self.logger.info(f"Validating {len(insights)} insights")
-        
-        # Placeholder validation logic
-        validated_insights = []
-        
-        for insight in insights:
-            # Mock validation criteria
-            if insight.get("confidence", 0) >= 0.7:
-                insight["validation_status"] = "approved"
-                insight["validation_score"] = insight["confidence"]
-                validated_insights.append(insight)
-            else:
-                insight["validation_status"] = "rejected"
-                insight["rejection_reason"] = "Low confidence score"
-        
-        return validated_insights
-    
-    def _persist_insights(self, reflection_id: str, insights: List[Dict[str, Any]], 
-                         connections: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """
-        Persist validated insights and connections to the database.
-        
-        Args:
-            reflection_id: Reflection ID
-            insights: Validated insights to persist
-            connections: Discovered connections to persist
-            
-        Returns:
-            Dict containing persistence results
-        """
-        self.logger.info(f"Persisting {len(insights)} insights for reflection: {reflection_id}")
-        
-        # Placeholder implementation - would integrate with insight repository
-        persisted_data = {
-            "reflection_id": reflection_id,
-            "insights_persisted": len(insights),
-            "connections_persisted": len(connections),
-            "timestamp": datetime.now().isoformat(),
-            "status": "success"
-        }
-        
-        return persisted_data
-    
-    def _mark_processing_complete(self, reflection_id: str) -> None:
-        """
-        Mark reflection processing as complete in the database.
-        
-        Args:
-            reflection_id: Reflection ID to mark as complete
-        """
-        self.logger.info(f"Marking processing complete for reflection: {reflection_id}")
-        
-        # Placeholder implementation - would update reflection status
-        pass
+    return list(set(categories))  # Remove duplicates

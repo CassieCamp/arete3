@@ -1,14 +1,25 @@
 'use client';
 
-// import { JourneyTab } from '@/components/mountain/JourneyTab';  // REMOVED: component deprecated
+import { useState } from 'react';
+import { useJourneyData } from '@/hooks/useJourneyData';
+import { ReflectionUploadModal } from '@/components/ReflectionUploadModal';
+import EmptyState from '@/components/journey/EmptyState';
+import { Plus } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ThreeIconNav } from '@/components/navigation/ThreeIconNav';
 import { PageHeader } from '@/components/ui/page-header';
-import { MeanderingPathway } from '@/components/journey';
-import EmptyState from '@/components/journey/EmptyState';
 import { Route } from 'lucide-react';
+import { MeanderingPathway } from '@/components/journey';
+import { InsightCard } from '@/components/InsightCard';
 
 export default function JourneyPage() {
+  const { reflections, loading, uploading, uploadDocument } = useJourneyData();
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+
+  const handlePlusClick = () => {
+    setUploadModalOpen(true); // Always open upload modal
+  };
+
   return (
     <div className="relative min-h-screen">
       {/* Background meandering pathway - full viewport */}
@@ -34,8 +45,19 @@ export default function JourneyPage() {
                     className="[&_h1]:text-white [&_svg]:text-white"
                   />
                   <div className="mt-8">
-                    {/* <JourneyTab /> */}
-                    <EmptyState />
+                    {/* Show empty state when no reflections exist */}
+                    {reflections.length === 0 && !loading && (
+                      <EmptyState />
+                    )}
+                    
+                    {/* Show reflections feed when reflections exist */}
+                    {reflections.length > 0 && (
+                      <div className="space-y-4">
+                        {reflections.map((reflection, index) => (
+                          <InsightCard key={reflection.id || index} reflection={reflection} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -44,6 +66,32 @@ export default function JourneyPage() {
         </div>
       </div>
       
+      {/* Plus button - always visible, always uploads */}
+      <div className="fixed bottom-24 right-6 z-50">
+        <button 
+          onClick={handlePlusClick}
+          className="w-16 h-16 rounded-full bg-slate-900/90 backdrop-blur-sm border-2 border-white flex items-center justify-center group shadow-2xl hover:scale-110 transition-transform"
+          style={{
+            boxShadow: `
+              0 0 0 0 rgba(255, 255, 255, 0.6),
+              0 0 20px rgba(255, 255, 255, 0.5),
+              0 0 40px rgba(255, 255, 255, 0.4),
+              0 0 60px rgba(255, 255, 255, 0.3),
+              0 4px 12px rgba(0, 0, 0, 0.3)
+            `
+          }}
+        >
+          <Plus className="w-8 h-8 text-white" />
+        </button>
+      </div>
+
+      <ReflectionUploadModal
+        isOpen={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onUpload={uploadDocument}
+        uploading={uploading}
+      />
+
       {/* Override AppLayout background and TopNav border with custom styles */}
       <style jsx global>{`
         .min-h-screen.bg-background {
