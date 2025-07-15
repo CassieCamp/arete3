@@ -4,7 +4,7 @@ const StatsSection: React.FC = () => {
   return (
     <section className="bg-background py-16 sm:py-24">
       <div className="container mx-auto px-4">
-        <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground text-center mb-12">
+        <h2 className="font-serif text-4xl font-bold text-foreground text-center mb-12">
           Coaching By The Numbers
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">

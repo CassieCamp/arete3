@@ -10,6 +10,8 @@ import { AuthDropdown } from '@/components/auth/AuthDropdown';
 import { Check } from 'lucide-react';
 import FounderMessage from '@/components/landing/FounderMessage';
 import StatsSection from '@/components/landing/StatsSection';
+import WhyArete from '@/components/landing/WhyArete';
+import { CenterIcon } from '@/components/icons/CenterIcon';
 
 export default function HomePage() {
   const router = useRouter();
@@ -143,6 +145,11 @@ export default function HomePage() {
 
       <StatsSection />
 
+      <WhyArete />
+
+      <div className="flex justify-center py-12">
+        <CenterIcon />
+      </div>
 
       {/* Discovery Form Section */}
       <section className="py-16 px-4 bg-background">
