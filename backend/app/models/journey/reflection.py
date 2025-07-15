@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from pydantic import Field, BaseModel
 from app.models.journey.base import ProcessableDocument
 from app.models.journey.enums import ProcessingStatus, DocumentType, CategoryType
@@ -11,6 +11,7 @@ class DocumentAnalysis(BaseModel):
     sentiment: str = Field(..., description="Overall sentiment of the document (e.g., positive, negative, neutral)")
     sentiment_score: float = Field(..., description="Numerical sentiment score, typically between -1.0 and 1.0")
     entities: Dict[str, List[str]] = Field(default_factory=dict, description="Named entities extracted from the document, categorized by type (e.g., people, places, organizations)")
+    categorized_insights: Optional[Dict[str, Any]] = Field(default=None, description="AI-generated categorized insights")
 
 class ReflectionSource(ProcessableDocument):
     """Complete reflection source model for MongoDB persistence"""

@@ -58,10 +58,10 @@ export const useJourneyData = () => {
         const insights = data.data?.insights || [];
         const reflections = insights.map((insight: any) => ({
           id: insight.id,
-          title: `Reflection ${insight.id.slice(-8)}`, // Use last 8 chars of ID as title
-          original_filename: `reflection_${insight.id.slice(-8)}.txt`,
+          title: insight.title || `Reflection ${insight.id.slice(-8)}`, // Use AI-generated title
+          original_filename: insight.original_filename || `reflection_${insight.id.slice(-8)}.txt`,
           upload_date: insight.created_at,
-          insights_by_category: {
+          insights_by_category: insight.insights_by_category || {
             understanding_myself: insight.key_points || [],
             navigating_relationships: [],
             optimizing_performance: insight.action_items || [],
@@ -91,11 +91,27 @@ export const useJourneyData = () => {
       });
       
       if (response.ok) {
-        // Refresh both insights and reflections after upload
-        setTimeout(() => {
-          fetchInsights();
-          fetchReflections();
-        }, 2000);
+        // Immediate refresh to show the document was uploaded
+        await fetchInsights();
+        await fetchReflections();
+        
+        // Poll for AI processing completion with exponential backoff
+        let attempts = 0;
+        const maxAttempts = 10;
+        const pollForUpdates = async () => {
+          attempts++;
+          await fetchInsights();
+          await fetchReflections();
+          
+          // Continue polling if we haven't reached max attempts
+          if (attempts < maxAttempts) {
+            const delay = Math.min(2000 * Math.pow(1.5, attempts - 1), 10000); // Max 10s delay
+            setTimeout(pollForUpdates, delay);
+          }
+        };
+        
+        // Start polling after initial delay
+        setTimeout(pollForUpdates, 3000);
         return true;
       }
       

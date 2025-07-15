@@ -90,29 +90,44 @@ async def upload_reflection_document(
                 document_type = DocumentType.TEXT
         
         # 5. Perform AI analysis on the extracted text
-        document_analysis = None
+        ai_analysis_result = None
         processing_status = ProcessingStatus.PROCESSING
         ai_processing_completed_at = None
+        generated_title = file.filename or "Untitled Document"
         
-        try:
-            if text_content and text_content.strip():
-                logger.info("Starting AI analysis of extracted text")
-                document_analysis = await analyze_text_for_insights(text_content)
-                processing_status = ProcessingStatus.COMPLETED
-                ai_processing_completed_at = datetime.utcnow()
-                logger.info("✅ AI analysis completed successfully")
-            else:
-                logger.warning("No text content available for AI analysis")
-                processing_status = ProcessingStatus.COMPLETED  # Still mark as completed if no text to analyze
-        except Exception as ai_error:
-            logger.error(f"❌ AI analysis failed: {ai_error}")
-            processing_status = ProcessingStatus.FAILED
-            # Continue with document creation even if AI fails
+        if text_content and text_content.strip():
+            logger.info("Starting AI analysis of extracted text")
+            ai_analysis_result = await analyze_text_for_insights(text_content)
+            processing_status = ProcessingStatus.COMPLETED
+            ai_processing_completed_at = datetime.utcnow()
+            
+            # Extract the generated title from AI analysis
+            if ai_analysis_result and ai_analysis_result.get("title"):
+                generated_title = ai_analysis_result["title"]
+                logger.info(f"✅ AI generated title: {generated_title}")
+            
+            logger.info("✅ AI analysis completed successfully")
+        else:
+            logger.warning("No text content available for AI analysis")
+            processing_status = ProcessingStatus.COMPLETED
         
-        # 6. Create ReflectionSource record with complete data including AI analysis
+        # 6. Create DocumentAnalysis object from AI result
+        document_analysis = None
+        if ai_analysis_result:
+            from app.models.journey.reflection import DocumentAnalysis
+            document_analysis = DocumentAnalysis(
+                summary=ai_analysis_result.get("summary", ""),
+                key_themes=ai_analysis_result.get("key_themes", []),
+                sentiment=ai_analysis_result.get("sentiment", "neutral"),
+                sentiment_score=ai_analysis_result.get("sentiment_score", 0.0),
+                entities=ai_analysis_result.get("entities", {}),
+                categorized_insights=ai_analysis_result.get("categorized_insights") # Add this line
+            )
+        
+        # 7. Create ReflectionSource record with complete data including AI analysis
         reflection = ReflectionSource(
             user_id=user_id,
-            title=file.filename or "Untitled Document",
+            title=generated_title,  # Use AI-generated title instead of filename
             content=text_content,
             original_filename=file.filename,
             file_path=file_path,
@@ -129,9 +144,18 @@ async def upload_reflection_document(
             updated_at=datetime.utcnow()
         )
         
-        # 7. Save to database
+        # 8. Save to database
         created_reflection = await reflection_repo.create(reflection)
         logger.info(f"Reflection created successfully with ID: {created_reflection.id}")
+        
+        # 9. Create individual Insight records from categorized insights
+        if ai_analysis_result and ai_analysis_result.get("categorized_insights"):
+            await _create_insights_from_analysis(
+                created_reflection,
+                ai_analysis_result["categorized_insights"],
+                user_id
+            )
+            logger.info("✅ Individual insights created successfully")
         
         return created_reflection
         
@@ -140,24 +164,6 @@ async def upload_reflection_document(
         raise
     except Exception as e:
         logger.error(f"Upload failed for user {user_id}, file {file.filename}: {e}")
-        
-        # Try to create a failed record if we have basic info
-        try:
-            failed_reflection = ReflectionSource(
-                user_id=user_id,
-                title=file.filename or "Failed Upload",
-                content=f"Processing failed: {str(e)}",
-                original_filename=file.filename,
-                file_size=file.size,
-                content_type=file.content_type,
-                processing_status=ProcessingStatus.FAILED,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
-            )
-            await reflection_repo.create(failed_reflection)
-        except Exception as db_error:
-            logger.error(f"Failed to create failed record: {db_error}")
-        
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to process document upload: {str(e)}"
@@ -172,54 +178,153 @@ async def get_insights(
     Get real insights data from the database for the user's journey feed.
     
     This endpoint returns actual ReflectionSource documents from the database
-    instead of mock data, providing real user reflections and insights.
+    with proper categorized insights mapping for the frontend.
     """
-    try:
-        user_id = user_info['clerk_user_id']
-        logger.info(f"=== get_insights called ===")
-        logger.info(f"user: {user_id}")
-        
-        # Fetch all ReflectionSource documents for the user from the database
-        reflections = await reflection_repo.get_by_user_id(user_id)
-        
-        # Convert ReflectionSource objects to the format expected by frontend
-        insights = []
-        for reflection in reflections:
-            insight_data = {
-                "id": str(reflection.id),
-                "title": reflection.title,
-                "summary": reflection.content[:150] + "..." if reflection.content and len(reflection.content) > 150 else reflection.content or "",
-                "content": reflection.content,
-                "categories": reflection.categories if reflection.categories else ["general"],
-                "tags": reflection.tags if reflection.tags else [],
-                "key_points": [reflection.content[:200]] if reflection.content else [],
-                "action_items": [],
-                "processing_status": reflection.processing_status.value if reflection.processing_status else "completed",
-                "word_count": reflection.word_count,
-                "document_type": reflection.document_type.value if reflection.document_type else None,
-                "original_filename": reflection.original_filename,
-                "created_at": reflection.created_at.isoformat() if reflection.created_at else "",
-                "updated_at": reflection.updated_at.isoformat() if reflection.updated_at else ""
-            }
-            insights.append(insight_data)
-        
-        response = {
-            "data": {
-                "insights": insights,
-                "reflections": insights  # Also provide as reflections for compatibility
-            }
-        }
-        
-        logger.info(f"✅ Successfully retrieved {len(insights)} real insights from database")
-        return response
-        
-    except Exception as e:
-        logger.error(f"❌ Error in get_insights: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while retrieving insights"
-        )
+    user_id = user_info['clerk_user_id']
+    logger.info(f"Getting insights for user: {user_id}")
     
+    # Fetch all ReflectionSource documents for the user from the database
+    reflections = await reflection_repo.get_by_user_id(user_id)
+    
+    # Convert ReflectionSource objects to the format expected by frontend
+    insights = []
+    for reflection in reflections:
+        # Extract categorized insights from document_analysis.entities
+        insights_by_category = {}
+        categorized_insights = None
+        
+        if (reflection.document_analysis and
+            hasattr(reflection.document_analysis, 'categorized_insights') and
+            reflection.document_analysis.categorized_insights):
+            categorized_insights = reflection.document_analysis.categorized_insights
+        
+        # Map categorized insights to frontend format using new emoji system
+        if categorized_insights and isinstance(categorized_insights, dict):
+            category_mapping = {
+                "🪞 Understanding Myself": "understanding_myself",
+                "👥 Navigating Relationships": "navigating_relationships",
+                "💪 Optimizing Performance": "optimizing_performance",
+                "🎯 Making Progress": "making_progress"
+            }
+            
+            for ai_category, frontend_key in category_mapping.items():
+                if ai_category in categorized_insights:
+                    insights_list = categorized_insights[ai_category]
+                    if insights_list and isinstance(insights_list, list):
+                        insights_by_category[frontend_key] = [
+                            item.get('insight', '') if isinstance(item, dict) else str(item)
+                            for item in insights_list if item
+                        ]
+            
+        insight_data = {
+            "id": str(reflection.id),
+            "title": reflection.title,  # Use AI-generated title directly
+            "summary": reflection.content[:150] + "..." if reflection.content and len(reflection.content) > 150 else reflection.content or "",
+            "content": reflection.content,
+            "categories": reflection.categories if reflection.categories else ["general"],
+            "tags": reflection.tags if reflection.tags else [],
+            "key_points": [reflection.content[:200]] if reflection.content else [],
+            "action_items": [],
+            "processing_status": reflection.processing_status.value if reflection.processing_status else "completed",
+            "word_count": reflection.word_count,
+            "document_type": reflection.document_type.value if reflection.document_type else None,
+            "original_filename": reflection.original_filename,
+            "created_at": reflection.created_at.isoformat() if reflection.created_at else "",
+            "updated_at": reflection.updated_at.isoformat() if reflection.updated_at else "",
+            "insights_by_category": insights_by_category  # Add categorized insights with new emoji system
+        }
+        insights.append(insight_data)
+    
+    response = {
+        "data": {
+            "insights": insights,
+            "reflections": insights  # Also provide as reflections for compatibility
+        }
+    }
+    
+    logger.info(f"✅ Successfully retrieved {len(insights)} insights from database")
+    return response
+
+async def _create_insights_from_analysis(
+    reflection: ReflectionSource,
+    categorized_insights: dict,
+    user_id: str
+) -> None:
+    """
+    Create individual Insight records from the AI categorized insights.
+    
+    Args:
+        reflection: The reflection source that generated the insights
+        categorized_insights: Dictionary of insights by category
+        user_id: User ID for the insights
+    """
+    from app.models.journey.insight import Insight
+    from app.models.journey.enums import CategoryType, ReviewStatus
+    from app.repositories.journey.insight_repository import InsightRepository
+    
+    insight_repo = InsightRepository()
+    
+    # Map category names to CategoryType enums
+    category_mapping = {
+        "🪞 Understanding Myself": CategoryType.PERSONAL_GROWTH,
+        "👥 Navigating Relationships": CategoryType.RELATIONSHIPS,
+        "💪 Optimizing Performance": CategoryType.GOALS_ACHIEVEMENT,
+        "🎯 Making Progress": CategoryType.CHALLENGES
+    }
+    
+    created_insights = []
+    
+    for category_name, insights_list in categorized_insights.items():
+        if not insights_list:  # Skip empty categories
+            continue
+            
+        category_type = category_mapping.get(category_name, CategoryType.PERSONAL_GROWTH)
+        
+        for insight_data in insights_list:
+            # Create Insight object with new emoji system categories
+            insight = Insight(
+                user_id=user_id,
+                title=f"{category_name}: {insight_data.get('insight', 'Generated Insight')[:50]}...",
+                content=insight_data.get('insight', 'No insight content available'),
+                summary=insight_data.get('evidence', '')[:200] + "..." if len(insight_data.get('evidence', '')) > 200 else insight_data.get('evidence', ''),
+                category=category_type,
+                subcategories=[],
+                tags=[category_name.replace('🪞 ', '').replace('👥 ', '').replace('💪 ', '').replace('🎯 ', '').lower().replace(' ', '_')],
+                source_id=str(reflection.id),
+                source_title=reflection.title,
+                source_excerpt=insight_data.get('evidence', '')[:300],
+                review_status=ReviewStatus.DRAFT,
+                confidence_score=float(insight_data.get('confidence', 0.5)),
+                is_favorite=False,
+                is_archived=False,
+                user_rating=None,
+                view_count=0,
+                is_actionable=True,  # AI insights are generally actionable
+                suggested_actions=[],
+                ai_model_version="enhanced_v1",
+                processing_metadata={
+                    "category": category_name,
+                    "original_evidence": insight_data.get('evidence', ''),
+                    "confidence": insight_data.get('confidence', 0.5)
+                },
+                generated_at=datetime.utcnow(),
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            
+            # Save insight to database
+            created_insight = await insight_repo.create(insight)
+            created_insights.append(str(created_insight.id))
+            
+            logger.info(f"Created insight: {created_insight.title}")
+    
+    # Update reflection with insight IDs
+    if created_insights:
+        reflection_repo = ReflectionSourceRepository()
+        for insight_id in created_insights:
+            await reflection_repo.add_insight_id(str(reflection.id), insight_id)
+        logger.info(f"Added {len(created_insights)} insight IDs to reflection")
+
 
 @router.get("/journey/feed", response_model=JourneyFeedResponse)
 async def get_journey_feed(

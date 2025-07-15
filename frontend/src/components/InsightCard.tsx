@@ -19,16 +19,16 @@ interface InsightCardProps {
 
 const CATEGORY_CONFIG = {
   understanding_myself: {
-    label: "🔍 Understanding Myself",
+    label: "🪞 Understanding Myself",
     description: "Self-awareness, emotional shifts, values alignment"
   },
   navigating_relationships: {
-    label: "🤝 Navigating Relationships", 
+    label: "👥 Navigating Relationships",
     description: "Interpersonal growth, politics, leadership influence"
   },
   optimizing_performance: {
-    label: "⚡ Optimizing Performance",
-    description: "Energy patterns, strengths, effectiveness"  
+    label: "💪 Optimizing Performance",
+    description: "Energy patterns, strengths, effectiveness"
   },
   making_progress: {
     label: "🎯 Making Progress",
