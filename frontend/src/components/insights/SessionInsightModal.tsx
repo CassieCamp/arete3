@@ -221,7 +221,7 @@ export function SessionInsightModal({
                 <h2 className="text-lg font-medium text-muted-foreground">Self Discovery</h2>
               </div>
               <div className="space-y-6">
-                {insight.client_discoveries.map((discovery, index) => (
+                {insight.client_discoveries.map((discovery: { insight: string; emotional_response: string }, index: number) => (
                   <div key={index} className="group">
                     <div className="bg-background border border-border rounded-lg p-6 hover:shadow-md transition-shadow">
                       <blockquote className="text-xl font-medium text-foreground leading-relaxed mb-4">
@@ -265,7 +265,7 @@ export function SessionInsightModal({
                 <h2 className="text-lg font-medium text-muted-foreground">Action Commitments</h2>
               </div>
               <div className="space-y-6">
-                {insight.action_items.map((item, index) => (
+                {insight.action_items.map((item: { action: string; timeline?: string; accountability_measure?: string; }, index: number) => (
                   <div key={index} className="bg-background border border-border rounded-lg p-6 hover:shadow-md transition-shadow">
                     <blockquote className="text-xl font-medium text-foreground leading-relaxed mb-6">
                       "{item.action}"
@@ -314,7 +314,7 @@ export function SessionInsightModal({
                     <div>
                       <p className="font-medium text-foreground mb-3 text-base">Support that would help:</p>
                       <ul className="space-y-2">
-                        {insight.intention.support_needed.map((support, index) => (
+                        {insight.intention.support_needed.map((support: string, index: number) => (
                           <li key={index} className="flex items-start gap-2 text-base text-muted-foreground">
                             <span className="w-2 h-2 rounded-full bg-chart-1 mt-2 flex-shrink-0"></span>
                             <span>{support}</span>
@@ -338,7 +338,7 @@ export function SessionInsightModal({
                 <h2 className="text-lg font-medium text-muted-foreground">Powerful Questions</h2>
               </div>
               <div className="space-y-8">
-                {insight.powerful_questions.map((question, index) => (
+                {insight.powerful_questions.map((question: { question: string; impact_description: string; client_response_summary?: string; }, index: number) => (
                   <div key={index} className="bg-background border border-border rounded-lg p-6 hover:shadow-md transition-shadow">
                     <blockquote className="text-xl font-medium text-foreground italic leading-relaxed mb-4">
                       "{question.question}"
@@ -373,7 +373,7 @@ export function SessionInsightModal({
                 <div>
                   <p className="font-medium text-foreground mb-4 text-base">Key themes we explored:</p>
                   <div className="flex flex-wrap gap-3">
-                    {insight.key_themes.map((theme, index) => (
+                    {insight.key_themes.map((theme: string, index: number) => (
                       <Badge key={index} variant="secondary" className="px-4 py-2 text-sm">
                         {theme}
                       </Badge>
