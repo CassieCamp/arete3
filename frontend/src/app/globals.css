@@ -65,3 +65,36 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+/* ARTFUL component animations - add to globals.css */
+@keyframes subtle-flow {
+  0%, 100% { transform: translateX(0px) translateY(0px); }
+  25% { transform: translateX(2px) translateY(-1px); }
+  50% { transform: translateX(1px) translateY(1px); }
+  75% { transform: translateX(-1px) translateY(-0.5px); }
+}
+
+@keyframes subtle-flow-reverse {
+  0%, 100% { transform: translateX(0px) translateY(0px); }
+  25% { transform: translateX(-1px) translateY(1px); }
+  50% { transform: translateX(-2px) translateY(-0.5px); }
+  75% { transform: translateX(1px) translateY(0.5px); }
+}
+
+@keyframes gentle-sway {
+  0%, 100% { transform: translateX(0px) scale(1); }
+  50% { transform: translateX(1px) scale(1.01); }
+}
+
+.animate-subtle-flow {
+  animation: subtle-flow 20s ease-in-out infinite;
+}
+
+.animate-subtle-flow-reverse {
+  animation: subtle-flow-reverse 25s ease-in-out infinite;
+}
+
+.animate-gentle-sway {
+  animation: gentle-sway 30s ease-in-out infinite;
+}

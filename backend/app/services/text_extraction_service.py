@@ -5,8 +5,131 @@ import pypdf
 from docx import Document as DocxDocument
 import io
 import tempfile
+from fastapi import UploadFile
+import uuid
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+
+async def save_uploaded_file(file: UploadFile) -> str:
+    """
+    Save an uploaded file to the uploads directory and return the file path.
+    
+    Args:
+        file: FastAPI UploadFile object
+        
+    Returns:
+        str: Path to the saved file
+        
+    Raises:
+        Exception: If file saving fails
+    """
+    logger.info(f"=== save_uploaded_file called ===")
+    logger.info(f"filename: {file.filename}, content_type: {file.content_type}")
+    
+    try:
+        # Create uploads directory if it doesn't exist
+        uploads_dir = "uploads"
+        os.makedirs(uploads_dir, exist_ok=True)
+        
+        # Generate unique filename to avoid conflicts
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        
+        # Get file extension
+        original_filename = file.filename or "uploaded_file"
+        file_extension = ""
+        if "." in original_filename:
+            file_extension = "." + original_filename.split(".")[-1]
+        
+        # Create unique filename
+        safe_filename = f"{timestamp}_{unique_id}_{original_filename.replace(' ', '_')}"
+        if not safe_filename.endswith(file_extension):
+            safe_filename += file_extension
+            
+        file_path = os.path.join(uploads_dir, safe_filename)
+        
+        # Read file content
+        file_content = await file.read()
+        
+        # Save file to disk
+        with open(file_path, "wb") as f:
+            f.write(file_content)
+        
+        logger.info(f"✅ Successfully saved file to: {file_path}")
+        return file_path
+        
+    except Exception as e:
+        error_msg = f"Error saving uploaded file: {str(e)}"
+        logger.error(error_msg)
+        raise Exception(error_msg) from e
+
+
+async def extract_text_from_file(file_path: str, content_type: str) -> str:
+    """
+    Extract text content from a file based on its content type.
+    
+    Args:
+        file_path: Path to the file to extract text from
+        content_type: MIME type of the file
+        
+    Returns:
+        str: Extracted text content
+        
+    Raises:
+        ValueError: If file type is not supported
+        FileNotFoundError: If file doesn't exist
+        Exception: For other processing errors
+    """
+    logger.info(f"=== extract_text_from_file called ===")
+    logger.info(f"file_path: {file_path}, content_type: {content_type}")
+    
+    # Check if file exists
+    if not os.path.exists(file_path):
+        error_msg = f"File not found: {file_path}"
+        logger.error(error_msg)
+        raise FileNotFoundError(error_msg)
+    
+    # Map content types to extraction methods
+    content_type_mapping = {
+        'application/pdf': 'pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+        'application/msword': 'docx',  # Treat .doc as .docx (limited support)
+        'text/plain': 'txt'
+    }
+    
+    # Determine file type from content type
+    file_type = content_type_mapping.get(content_type)
+    
+    # If content type mapping fails, try to determine from file extension
+    if not file_type:
+        file_extension = file_path.lower().split('.')[-1] if '.' in file_path else 'txt'
+        extension_mapping = {
+            'pdf': 'pdf',
+            'docx': 'docx',
+            'doc': 'docx',
+            'txt': 'txt'
+        }
+        file_type = extension_mapping.get(file_extension, 'txt')
+    
+    # Use the existing TextExtractionService
+    text_service = TextExtractionService()
+    
+    if not text_service.is_supported_file_type(file_type):
+        error_msg = f"Unsupported file type: {file_type}. Supported types: {text_service.get_supported_file_types()}"
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+    
+    try:
+        extracted_text = text_service.extract_text_from_file(file_path, file_type)
+        logger.info(f"✅ Successfully extracted {len(extracted_text)} characters from {file_path}")
+        return extracted_text
+        
+    except Exception as e:
+        error_msg = f"Error extracting text from {file_path}: {str(e)}"
+        logger.error(error_msg)
+        raise Exception(error_msg) from e
 
 
 class TextExtractionService:

@@ -119,4 +119,5 @@ class JourneyFeedResponse(BaseModel):
     total_count: int = Field(..., description="Total number of items")
     skip: int = Field(..., description="Number of items skipped")
     limit: int = Field(..., description="Maximum number of items returned")
+    category_counts: Optional[Dict[str, int]] = Field(default=None, description="Count of items per category for filter UI")
 

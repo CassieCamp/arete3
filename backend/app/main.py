@@ -13,6 +13,7 @@ from app.api.v1.endpoints.notifications import router as notifications_router
 from app.api.v1.endpoints.discovery_form import router as discovery_form_router
 from app.api.v1.endpoints.quotes import router as quotes_router
 from app.api.v1.endpoints.journey import router as journey_router
+from app.api.v1.endpoints.reflections import router as reflections_router
 
 from app.api.v1.endpoints.coach import router as coach_router
 from app.api.v1.endpoints.member import router as member_router
@@ -69,6 +70,7 @@ app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["
 app.include_router(discovery_form_router, prefix="/api/v1/discovery-form", tags=["discovery-form"])
 app.include_router(quotes_router, prefix="/api/v1", tags=["quotes"])
 app.include_router(journey_router, prefix="/api/v1/journey", tags=["journey"])
+app.include_router(reflections_router, prefix="/api/v1/reflections", tags=["reflections"])
 
 app.include_router(coach_router, prefix="/api/v1/coach", tags=["coach"])
 app.include_router(member_router, prefix="/api/v1/member", tags=["member"])
