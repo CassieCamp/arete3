@@ -47,7 +47,7 @@ export default function HomePage() {
       ],
       cta: "Join the Waitlist",
       ctaVariant: "default" as const,
-      smallPrint: "* Between active coaching periods, hibernation mode available at $5/month to preserve your journey data.\n** If your coach upgrades to the Coach Professional plan, you'll receive a credit for one quarter ($237)."
+      smallPrint: "* Between active coaching periods, hibernation mode available at $5/month to preserve your journey data.\n** If your coach upgrades to the Coach Professional plan, you'll receive a credit for one quarter."
     },
     {
       id: "coach-professional",
