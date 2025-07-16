@@ -8,7 +8,7 @@ const ForLeaders = () => (
         <Check className="w-5 h-5 text-primary mr-3 mt-1 flex-shrink-0" />
         <div>
           <h4 className="font-semibold">Never lose your growth again</h4>
-          <p className="text-muted-foreground">All coaching sessions, insights, and breakthroughs in one continuous journey feed</p>
+          <p className="text-muted-foreground">All coaching sessions, insights, and breakthroughs in one continuous journey feed across multiple coaches</p>
         </div>
       </li>
       <li className="flex items-start">

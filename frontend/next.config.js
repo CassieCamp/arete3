@@ -1,6 +1,12 @@
 const path = require('path');
 
 const nextConfig = {
+  reactStrictMode: true,
+  // Disable development indicators
+  devIndicators: {
+    buildActivity: false,
+    buildActivityPosition: 'bottom-right',
+  },
   eslint: {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.
