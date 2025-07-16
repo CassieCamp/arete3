@@ -37,7 +37,7 @@ export default function HomePage() {
     {
       id: "client-solo",
       name: "Client Growth Enhanced",
-      price: "$39/month",
+      price: "Beta Pricing Coming Soon",
       popular: true,
       features: [
         "Unlimited AI session analysis",
@@ -52,7 +52,7 @@ export default function HomePage() {
     {
       id: "coach-professional",
       name: "Coach Professional",
-      price: "$199/month",
+      price: "Beta Pricing Coming Soon",
       popular: false,
       features: [
         "Leverage AI to amplify your impact",
