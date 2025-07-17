@@ -16,7 +16,7 @@ const FounderMessage: React.FC = () => {
               I'm a 20+ year startup veteran, product exec, and coach who's had multiple coaches since 2019 - from boutique executive firms to solo practitioners to peer circles. I've also coached startup founders and AI/ML engineers on retainer. I know this space from both sides.
             </p>
             <p>
-              The reality? The coaching workflow is stuck in Zoom meetings and Google Docs and needs an upgrade. While people are increasingly turning to AI for coaching, my worst fear is leaders just talking to robots instead of cultivating deep relationships and practicing self-reflection with humans. Yet I also see how AI can genuinely support leaders who work with coaches.
+              The reality? Coaching has incredible potential that technology hasn't fully unlocked yet. But here's the thing - while people are increasingly turning to AI for coaching, my worst fear is leaders just talking to robots instead of cultivating deep relationships and practicing self-reflection with humans. But the magic happens when AI serves human connection - amplifying coaches' insights and deepening the work between sessions and between coaches.
             </p>
             <p>
               My goal: Support the coaching industry with AI that empowers coaches, not replaces them. For leaders, I'm building Arete to be your well-worn journal throughout your career - reusable across jobs and coaches, helping you stay consistent with self-reflection between sessions. I hope you'll join the waitlist.
