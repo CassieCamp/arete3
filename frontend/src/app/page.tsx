@@ -2,16 +2,16 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useClerk, useUser, UserButton } from '@clerk/nextjs';
+import { useClerk, useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AuthDropdown } from '@/components/auth/AuthDropdown';
 import { Check } from 'lucide-react';
 import FounderMessage from '@/components/landing/FounderMessage';
 import StatsSection from '@/components/landing/StatsSection';
 import WhyArete from '@/components/landing/WhyArete';
 import { CenterIcon } from '@/components/icons/CenterIcon';
+import LandingHeader from '@/components/layout/LandingHeader';
 
 export default function HomePage() {
   const router = useRouter();
@@ -69,41 +69,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/" className="text-2xl font-bold font-serif text-foreground hover:opacity-80 transition-opacity">
-            Arete
-          </Link>
-          <div className="flex gap-4 items-center">
-            {isSignedIn ? (
-              <>
-                <Link href="/member/journey">
-                  <Button variant="ghost">
-                    My Arete
-                  </Button>
-                </Link>
-                <UserButton
-                  appearance={{
-                    elements: {
-                      avatarBox: "w-8 h-8"
-                    }
-                  }}
-                />
-              </>
-            ) : (
-              <>
-                <AuthDropdown variant="ghost" />
-                <Link href="https://forms.gle/o2oQGGgMTv8RgdyV6" target="_blank" rel="noopener noreferrer">
-                  <Button>
-                    Join the Waitlist
-                  </Button>
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+      <LandingHeader />
 
       {/* Hero Section */}
       <section className="py-16 px-4">
