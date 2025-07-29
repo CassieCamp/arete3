@@ -7,8 +7,8 @@ from app.schemas.coaching_relationship import (
     UserRelationshipsResponse
 )
 from app.services.coaching_relationship_service import CoachingRelationshipService
+from app.services.user_service import UserService
 from app.repositories.coaching_relationship_repository import CoachingRelationshipRepository
-from app.repositories.user_repository import UserRepository
 from app.api.v1.deps import org_required, org_optional
 from app.models.coaching_relationship import RelationshipStatus
 import logging
@@ -21,22 +21,30 @@ router = APIRouter()
 def get_coaching_relationship_service() -> CoachingRelationshipService:
     """Dependency to get coaching relationship service"""
     coaching_relationship_repository = CoachingRelationshipRepository()
-    user_repository = UserRepository()
-    return CoachingRelationshipService(coaching_relationship_repository, user_repository)
+    user_service = UserService()
+    return CoachingRelationshipService(coaching_relationship_repository, user_service)
 
 
-async def convert_relationship_to_response(relationship, user_repository: UserRepository) -> CoachingRelationshipResponse:
+def convert_relationship_to_response(relationship, user_service: UserService) -> CoachingRelationshipResponse:
     """Convert CoachingRelationship model to response schema with user emails"""
     # Fetch coach and client emails
-    coach_user = await user_repository.get_user_by_clerk_id(relationship.coach_user_id)
-    client_user = await user_repository.get_user_by_clerk_id(relationship.client_user_id)
+    coach_user = user_service.get_user(relationship.coach_user_id)
+    client_user = user_service.get_user(relationship.client_user_id)
     
+    def get_primary_email(user):
+        if not user or not user.email_addresses:
+            return None
+        for email in user.email_addresses:
+            if email.id == user.primary_email_address_id:
+                return email.email_address
+        return user.email_addresses[0].email_address
+
     return CoachingRelationshipResponse(
         id=str(relationship.id),
         coach_user_id=relationship.coach_user_id,
         client_user_id=relationship.client_user_id,
-        coach_email=coach_user.email if coach_user else None,
-        client_email=client_user.email if client_user else None,
+        coach_email=get_primary_email(coach_user),
+        client_email=get_primary_email(client_user),
         status=relationship.status,
         created_at=relationship.created_at,
         updated_at=relationship.updated_at
@@ -61,8 +69,8 @@ async def create_connection_request(
             client_email=request.client_email
         )
         
-        user_repository = UserRepository()
-        return await convert_relationship_to_response(relationship, user_repository)
+        user_service = UserService()
+        return convert_relationship_to_response(relationship, user_service)
         
     except ValueError as e:
         logger.error(f"ValueError in create_connection_request: {e}")

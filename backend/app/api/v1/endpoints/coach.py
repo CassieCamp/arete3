@@ -3,11 +3,10 @@ from typing import List, Optional
 from app.models.coach_resource import CoachResource, CoachClientNote
 from app.repositories.coach_resource_repository import CoachResourceRepository
 from app.repositories.coaching_relationship_repository import CoachingRelationshipRepository
-from app.repositories.user_repository import UserRepository
+from app.services.user_service import UserService
 from app.repositories.profile_repository import ProfileRepository
 from app.repositories.entry_repository import EntryRepository
 from app.api.v1.deps import org_required
-from app.models.user import User
 from pydantic import BaseModel
 from datetime import datetime
 import logging
@@ -71,20 +70,30 @@ async def get_coach_clients(user_info: dict = Depends(org_required)):
         relationships = await coaching_repo.get_relationships_for_coach(clerk_user_id)
         
         # Get user and profile repositories
-        user_repo = UserRepository()
+        user_service = UserService()
         profile_repo = ProfileRepository()
         entry_repo = EntryRepository()
         
         clients = []
         for relationship in relationships:
             # Get client user data
-            client_user = await user_repo.get_user_by_clerk_id(relationship.client_user_id)
+            client_user = user_service.get_user(relationship.client_user_id)
             if not client_user:
                 continue
                 
+            def get_primary_email(user):
+                if not user or not user.email_addresses:
+                    return None
+                for email in user.email_addresses:
+                    if email.id == user.primary_email_address_id:
+                        return email.email_address
+                return user.email_addresses[0].email_address
+            
+            client_email = get_primary_email(client_user)
+
             # Get client profile for name
             client_profile = await profile_repo.get_profile_by_clerk_id(relationship.client_user_id)
-            client_name = f"{client_profile.first_name} {client_profile.last_name}" if client_profile else client_user.email
+            client_name = f"{client_profile.first_name} {client_profile.last_name}" if client_profile else client_email
             
             # Get client entry stats
             entries_count = await entry_repo.get_entries_count_by_user(relationship.client_user_id)
@@ -93,7 +102,7 @@ async def get_coach_clients(user_info: dict = Depends(org_required)):
             clients.append(CoachClient(
                 id=relationship.client_user_id,
                 name=client_name,
-                email=client_user.email,
+                email=client_email,
                 relationship_status=relationship.status.value,
                 entries_count=entries_count,
                 last_entry_date=last_entry.created_at if last_entry else None,

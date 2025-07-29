@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useClerk, useUser } from '@clerk/nextjs';
+import RoleBasedRedirect from '@/components/auth/RoleBasedRedirect';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +18,15 @@ export default function HomePage() {
   const router = useRouter();
   const { redirectToSignIn } = useClerk();
   const { user, isSignedIn } = useUser();
+
+  console.log("HomePage - isSignedIn:", isSignedIn, "user:", user);
+
+  if (isSignedIn) {
+    console.log("User is signed in, rendering RoleBasedRedirect");
+    return <RoleBasedRedirect />;
+  }
+
+  console.log("User is not signed in, rendering landing page");
 
   const pricingTiers = [
     {

@@ -232,7 +232,8 @@ class ClerkOrganizationService:
                                     "id": org.get("id"),
                                     "name": org.get("name"),
                                     "role": clean_role,
-                                    "metadata": org.get("private_metadata", {})
+                                    "metadata": org.get("private_metadata", {}),
+                                    "public_user_data": membership.get("public_user_data", {})
                                 })
                             else:
                                 logger.warning(f"Unexpected organization format in membership: {type(org)}")

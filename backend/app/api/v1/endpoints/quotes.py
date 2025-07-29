@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Dict, Any, Optional
 from app.services.quote_service import QuoteService
-from app.api.v1.deps import get_current_user
+from app.api.v1.deps import get_current_user_clerk_id
 from pydantic import BaseModel
 import logging
 
@@ -25,15 +25,15 @@ class CreateQuoteRequest(BaseModel):
 @router.get("/quotes")
 async def get_daily_quotes(
     count: int = 5,
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    user_info: Dict[str, Any] = Depends(get_current_user_clerk_id)
 ):
     """Get personalized daily quotes for carousel"""
     try:
         logger.info(f"=== GET /quotes called ===")
-        logger.info(f"Getting {count} daily quotes for user: {current_user['user_id']}")
+        logger.info(f"Getting {count} daily quotes for user: {user_info['clerk_user_id']}")
         
         quote_service = QuoteService()
-        quotes = await quote_service.get_daily_quotes(current_user["user_id"], count)
+        quotes = await quote_service.get_daily_quotes(user_info["clerk_user_id"], count)
         
         logger.info(f"✅ Successfully retrieved {len(quotes)} quotes")
         return {"quotes": quotes}
@@ -50,15 +50,15 @@ async def get_daily_quotes(
 async def like_quote(
     quote_id: str,
     like_data: QuoteLikeRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    user_info: Dict[str, Any] = Depends(get_current_user_clerk_id)
 ):
     """Like or unlike a quote"""
     try:
         logger.info(f"=== POST /quotes/{quote_id}/like called ===")
-        logger.info(f"User {current_user['user_id']} {'liking' if like_data.liked else 'unliking'} quote {quote_id}")
+        logger.info(f"User {user_info['clerk_user_id']} {'liking' if like_data.liked else 'unliking'} quote {quote_id}")
         
         quote_service = QuoteService()
-        result = await quote_service.like_quote(current_user["user_id"], quote_id)
+        result = await quote_service.like_quote(user_info["clerk_user_id"], quote_id)
         
         logger.info(f"✅ Successfully processed like action")
         return result
@@ -80,15 +80,15 @@ async def like_quote(
 @router.get("/quotes/favorites")
 async def get_favorite_quotes(
     limit: int = 20,
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    user_info: Dict[str, Any] = Depends(get_current_user_clerk_id)
 ):
     """Get user's favorite quotes"""
     try:
         logger.info(f"=== GET /quotes/favorites called ===")
-        logger.info(f"Getting favorite quotes for user: {current_user['user_id']}")
+        logger.info(f"Getting favorite quotes for user: {user_info['clerk_user_id']}")
         
         quote_service = QuoteService()
-        favorites = await quote_service.get_user_favorites(current_user["user_id"], limit)
+        favorites = await quote_service.get_user_favorites(user_info["clerk_user_id"], limit)
         
         logger.info(f"✅ Successfully retrieved {len(favorites)} favorite quotes")
         return {"favorite_quotes": favorites}
@@ -105,7 +105,7 @@ async def get_favorite_quotes(
 async def get_quotes_by_category(
     category: str,
     limit: int = 10,
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    user_info: Dict[str, Any] = Depends(get_current_user_clerk_id)
 ):
     """Get quotes by category"""
     try:
@@ -113,7 +113,7 @@ async def get_quotes_by_category(
         logger.info(f"Getting quotes for category: {category}")
         
         quote_service = QuoteService()
-        quotes = await quote_service.get_quotes_by_category(category, current_user["user_id"], limit)
+        quotes = await quote_service.get_quotes_by_category(category, user_info["clerk_user_id"], limit)
         
         logger.info(f"✅ Successfully retrieved {len(quotes)} quotes for category {category}")
         return {"quotes": quotes}
@@ -130,21 +130,21 @@ async def get_quotes_by_category(
 @router.post("/admin/quotes")
 async def create_quote(
     quote_data: CreateQuoteRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    user_info: Dict[str, Any] = Depends(get_current_user_clerk_id)
 ):
     """Create a new quote (admin only)"""
     try:
         logger.info(f"=== POST /admin/quotes called ===")
-        logger.info(f"Creating quote by user: {current_user['user_id']}")
+        logger.info(f"Creating quote by user: {user_info['clerk_user_id']}")
         
         # TODO: Add admin role check
-        # if current_user["role"] != "admin":
+        # if user_info["primary_role"] != "admin":
         #     raise HTTPException(status_code=403, detail="Admin access required")
         
         quote_service = QuoteService()
         quote = await quote_service.create_quote(
             quote_data.model_dump(),
-            current_user["user_id"]
+            user_info["clerk_user_id"]
         )
         
         logger.info(f"✅ Successfully created quote: {quote.id}")

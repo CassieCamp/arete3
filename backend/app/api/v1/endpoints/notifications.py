@@ -6,7 +6,7 @@ from app.schemas.notification import (
 )
 from app.services.notification_service import NotificationService
 from app.services.websocket_service import websocket_service
-from app.api.v1.deps import get_current_user, get_current_user_websocket
+from app.api.v1.deps import get_current_user_clerk_id, get_current_user_websocket
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,24 +19,24 @@ async def get_notifications(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     unread_only: bool = Query(False),
-    current_user: dict = Depends(get_current_user)
+    user_info: dict = Depends(get_current_user_clerk_id)
 ):
     """Get notifications for the current user"""
     logger.info(f"=== GET /notifications called ===")
-    logger.info(f"Getting notifications for user: {current_user.get('user_id')}")
+    logger.info(f"Getting notifications for user: {user_info.get('clerk_user_id')}")
     logger.info(f"Params - limit: {limit}, offset: {offset}, unread_only: {unread_only}")
     
     try:
         notification_service = NotificationService()
-        user_id = current_user["user_id"]
+        clerk_user_id = user_info["clerk_user_id"]
         
         # Get notifications
         notifications = await notification_service.get_user_notifications(
-            user_id, limit, offset, unread_only
+            clerk_user_id, limit, offset, unread_only
         )
         
         # Get unread count
-        unread_count = await notification_service.get_unread_count(user_id)
+        unread_count = await notification_service.get_unread_count(clerk_user_id)
         
         # Convert to response format
         notification_responses = []
@@ -93,17 +93,17 @@ async def get_notifications(
 
 @router.get("/unread-count")
 async def get_unread_count(
-    current_user: dict = Depends(get_current_user)
+    user_info: dict = Depends(get_current_user_clerk_id)
 ):
     """Get count of unread notifications for the current user"""
     logger.info(f"=== GET /notifications/unread-count called ===")
-    logger.info(f"Getting unread count for user: {current_user.get('user_id')}")
+    logger.info(f"Getting unread count for user: {user_info.get('clerk_user_id')}")
     
     try:
         notification_service = NotificationService()
-        user_id = current_user["user_id"]
+        clerk_user_id = user_info["clerk_user_id"]
         
-        unread_count = await notification_service.get_unread_count(user_id)
+        unread_count = await notification_service.get_unread_count(clerk_user_id)
         
         logger.info(f"✅ Successfully retrieved unread count: {unread_count}")
         return {"unread_count": unread_count}
@@ -119,17 +119,17 @@ async def get_unread_count(
 @router.post("/{notification_id}/read", status_code=status.HTTP_200_OK)
 async def mark_notification_as_read(
     notification_id: str,
-    current_user: dict = Depends(get_current_user)
+    user_info: dict = Depends(get_current_user_clerk_id)
 ):
     """Mark a specific notification as read"""
     logger.info(f"=== POST /notifications/{notification_id}/read called ===")
-    logger.info(f"Marking notification as read for user: {current_user.get('user_id')}")
+    logger.info(f"Marking notification as read for user: {user_info.get('clerk_user_id')}")
     
     try:
         notification_service = NotificationService()
-        user_id = current_user["user_id"]
+        clerk_user_id = user_info["clerk_user_id"]
         
-        success = await notification_service.mark_as_read(notification_id, user_id)
+        success = await notification_service.mark_as_read(notification_id, clerk_user_id)
         
         if not success:
             raise HTTPException(
@@ -152,17 +152,17 @@ async def mark_notification_as_read(
 
 @router.post("/mark-all-read", status_code=status.HTTP_200_OK)
 async def mark_all_notifications_as_read(
-    current_user: dict = Depends(get_current_user)
+    user_info: dict = Depends(get_current_user_clerk_id)
 ):
     """Mark all notifications as read for the current user"""
     logger.info(f"=== POST /notifications/mark-all-read called ===")
-    logger.info(f"Marking all notifications as read for user: {current_user.get('user_id')}")
+    logger.info(f"Marking all notifications as read for user: {user_info.get('clerk_user_id')}")
     
     try:
         notification_service = NotificationService()
-        user_id = current_user["user_id"]
+        clerk_user_id = user_info["clerk_user_id"]
         
-        count = await notification_service.mark_all_as_read(user_id)
+        count = await notification_service.mark_all_as_read(clerk_user_id)
         
         logger.info(f"✅ Successfully marked {count} notifications as read")
         return {"message": f"Marked {count} notifications as read", "count": count}
@@ -178,17 +178,17 @@ async def mark_all_notifications_as_read(
 @router.post("/{notification_id}/dismiss", status_code=status.HTTP_200_OK)
 async def dismiss_notification(
     notification_id: str,
-    current_user: dict = Depends(get_current_user)
+    user_info: dict = Depends(get_current_user_clerk_id)
 ):
     """Dismiss a specific notification"""
     logger.info(f"=== POST /notifications/{notification_id}/dismiss called ===")
-    logger.info(f"Dismissing notification for user: {current_user.get('user_id')}")
+    logger.info(f"Dismissing notification for user: {user_info.get('clerk_user_id')}")
     
     try:
         notification_service = NotificationService()
-        user_id = current_user["user_id"]
+        clerk_user_id = user_info["clerk_user_id"]
         
-        success = await notification_service.dismiss_notification(notification_id, user_id)
+        success = await notification_service.dismiss_notification(notification_id, clerk_user_id)
         
         if not success:
             raise HTTPException(
@@ -212,19 +212,19 @@ async def dismiss_notification(
 @router.get("/{notification_id}", response_model=NotificationResponse)
 async def get_notification(
     notification_id: str,
-    current_user: dict = Depends(get_current_user)
+    user_info: dict = Depends(get_current_user_clerk_id)
 ):
     """Get a specific notification by ID"""
     logger.info(f"=== GET /notifications/{notification_id} called ===")
-    logger.info(f"Getting notification for user: {current_user.get('user_id')}")
+    logger.info(f"Getting notification for user: {user_info.get('clerk_user_id')}")
     
     try:
         notification_service = NotificationService()
-        user_id = current_user["user_id"]
+        clerk_user_id = user_info["clerk_user_id"]
         
         # Get all user notifications and find the specific one
         # This ensures the user has permission to view this notification
-        notifications = await notification_service.get_user_notifications(user_id, limit=1000)
+        notifications = await notification_service.get_user_notifications(clerk_user_id, limit=1000)
         
         notification = None
         for notif in notifications:
@@ -331,18 +331,18 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
 
 @router.post("/test")
 async def create_test_notification(
-    current_user: dict = Depends(get_current_user)
+    user_info: dict = Depends(get_current_user_clerk_id)
 ):
     """Create a test notification for development purposes"""
     logger.info("=== Creating test notification ===")
     
     try:
         notification_service = NotificationService()
-        user_id = current_user["user_id"]
+        clerk_user_id = user_info["clerk_user_id"]
         
         # Create a test notification
         await notification_service.notify_system_update(
-            user_id=user_id,
+            user_id=clerk_user_id,
             title="Test Notification",
             message="This is a test notification to verify the real-time notification system is working correctly."
         )

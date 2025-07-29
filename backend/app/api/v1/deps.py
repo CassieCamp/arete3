@@ -3,6 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from clerk_backend_api import Clerk
 from app.core.config import settings
 from app.services.user_service import UserService
+from app.services.clerk_organization_service import ClerkOrganizationService
 from app.services.analysis_service import AnalysisService
 from app.repositories.baseline_repository import BaselineRepository
 from app.repositories.document_repository import DocumentRepository
@@ -198,13 +199,41 @@ async def get_current_user_clerk_id(
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             
-            # Extract role information from publicMetadata
-            public_metadata = decoded_token.get("publicMetadata", {})
-            primary_role = public_metadata.get("primary_role", "member")
-            organization_roles = public_metadata.get("organization_roles", {})
-            
+            # Fetch real-time organization roles from Clerk to ensure data is fresh
+            clerk_org_service = ClerkOrganizationService()
+            try:
+                user_orgs = await clerk_org_service.get_user_organizations(clerk_user_id)
+                organization_roles = {
+                    org["id"]: {"role": org["role"]} for org in user_orgs
+                }
+                
+                # Extract user's first and last name from organization data
+                first_name = ""
+                last_name = ""
+                if user_orgs:
+                    public_user_data = user_orgs[0].get("public_user_data", {})
+                    first_name = public_user_data.get("first_name", "")
+                    last_name = public_user_data.get("last_name", "")
+
+                # Determine primary_role based on the most privileged role found
+                is_coach_or_admin = any(
+                    org["role"] in ["admin", "coach"] for org in user_orgs
+                )
+                
+                jwt_primary_role = decoded_token.get("publicMetadata", {}).get("primary_role", "member")
+                primary_role = "coach" if is_coach_or_admin else jwt_primary_role
+                logger.info(f"✅ Successfully fetched real-time roles from Clerk for user {clerk_user_id}.")
+
+            except Exception as e:
+                logger.error(f"❌ Failed to fetch organization roles from Clerk for user {clerk_user_id}: {e}")
+                # Fallback to JWT roles if Clerk call fails
+                public_metadata = decoded_token.get("publicMetadata", {})
+                primary_role = public_metadata.get("primary_role", "member")
+                organization_roles = public_metadata.get("organization_roles", {})
+                logger.warning(f"⚠️ Using potentially stale roles from JWT for user {clerk_user_id}.")
+
             logger.info(f"🔍 Authenticated user with Clerk ID: {clerk_user_id}")
-            logger.info(f"🔍 Primary role: {primary_role}, Organization roles: {organization_roles}")
+            logger.info(f"🔍 Effective Primary role: {primary_role}, Organization roles: {organization_roles}")
             
             # Validate session freshness (non-blocking by default)
             try:
@@ -223,20 +252,13 @@ async def get_current_user_clerk_id(
                 logger.error(f"❌ Session validation error for {clerk_user_id}: {validation_error}")
                 # Continue with authentication even if validation fails
             
-            # Check if user exists in backend database and sync if not
-            user_service = UserService()
-            existing_user = await user_service.get_user_by_clerk_id(clerk_user_id)
-            
-            if not existing_user:
-                logger.warning(f"⚠️ User {clerk_user_id} not in DB, attempting sync from Clerk.")
-                await user_service.sync_user_from_clerk(clerk_user_id, primary_role)
-            else:
-                logger.info(f"✅ User {clerk_user_id} found in backend database: {existing_user.id}")
-            
+            # The user is authenticated by Clerk, no need to check our database.
             return {
                 "clerk_user_id": clerk_user_id,
                 "primary_role": primary_role,
-                "organization_roles": organization_roles
+                "organization_roles": organization_roles,
+                "first_name": first_name,
+                "last_name": last_name
             }
             
         except HTTPException:
@@ -269,41 +291,6 @@ async def get_current_user_clerk_id_optional(
         return None
 
 
-async def get_current_user(
-    user_info: Dict[str, Any] = Depends(get_current_user_clerk_id)
-) -> dict:
-    """
-    Get current user information including user_id from backend database
-    """
-    try:
-        clerk_user_id = user_info["clerk_user_id"]
-        user_service = UserService()
-        user = await user_service.get_user_by_clerk_id(clerk_user_id)
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found in backend database"
-            )
-        
-        return {
-            "user_id": str(user.id),
-            "clerk_user_id": clerk_user_id,
-            "email": user.email,
-            "primary_role": user_info["primary_role"],  # Always use Clerk JWT claims
-            "organization_roles": user_info["organization_roles"]  # Always use Clerk JWT claims
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error getting current user: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get user information"
-        )
-
-
 def get_analysis_service() -> AnalysisService:
     """
     Get AnalysisService instance with required dependencies
@@ -331,22 +318,29 @@ async def get_current_user_websocket(websocket: WebSocket, token: str = Query(..
         
         logger.info(f"🔍 Authenticated WebSocket user with Clerk ID: {clerk_user_id}")
         
-        # Get user from database
-        user = await user_service.get_user_by_clerk_id(clerk_user_id)
+        # Get user from Clerk
+        user = user_service.get_user(clerk_user_id)
         if not user:
             logger.error(f"User not found for clerk_id: {clerk_user_id}")
             raise HTTPException(status_code=401, detail="User not found")
+
+        def get_primary_email(user):
+            if not user or not user.email_addresses:
+                return None
+            for email in user.email_addresses:
+                if email.id == user.primary_email_address_id:
+                    return email.email_address
+            return user.email_addresses[0].email_address
         
-        logger.info(f"✅ WebSocket User {clerk_user_id} found in backend database: {user.id}")
+        logger.info(f"✅ WebSocket User {clerk_user_id} found via Clerk")
         
         # Extract role information from JWT token
         public_metadata = decoded_token.get("publicMetadata", {})
         primary_role = public_metadata.get("primary_role", "member")
         
         return {
-            "user_id": str(user.id),  # Fixed: Use backend user ID consistently
             "clerk_user_id": clerk_user_id,
-            "email": user.email,
+            "email": get_primary_email(user),
             "primary_role": primary_role  # Always use Clerk JWT claims
         }
         
@@ -383,15 +377,7 @@ async def org_required(
         logger.info(f"🔒 org_required: Checking access for user {clerk_user_id}")
         logger.info(f"🔒 Primary role: {primary_role}, Organization roles: {organization_roles}")
         
-        # Step 1: Check primary role - members cannot access org-specific endpoints
-        if primary_role == "member":
-            logger.warning(f"🔒 Access denied: User {clerk_user_id} has primary role 'member'")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied: Members cannot access organization-specific endpoints"
-            )
-        
-        # Step 2: Check for X-Org-Id header
+        # Step 1: Check for X-Org-Id header
         org_id = request.headers.get("X-Org-Id")
         if not org_id:
             logger.warning(f"🔒 Access denied: Missing X-Org-Id header for user {clerk_user_id}")
@@ -402,6 +388,14 @@ async def org_required(
         
         logger.info(f"🔒 Checking organization access for org_id: {org_id}")
         
+        # Step 2: Check if the user has a role that allows access to org endpoints
+        if primary_role == "member":
+            logger.warning(f"🔒 Access denied: User {clerk_user_id} has primary role 'member', which is not sufficient for this endpoint.")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: Your role does not permit access to this resource."
+            )
+
         # Step 3: Check organization membership and role
         if org_id not in organization_roles:
             logger.warning(f"🔒 Access denied: User {clerk_user_id} not member of organization {org_id}")

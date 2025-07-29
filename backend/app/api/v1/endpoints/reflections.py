@@ -3,7 +3,7 @@ from typing import List
 import logging
 from datetime import datetime
 
-from app.api.v1.deps import get_current_user
+from app.api.v1.deps import get_current_user_clerk_id
 from app.models.journey.reflection import ReflectionSource
 from app.models.journey.enums import DocumentType, ProcessingStatus
 from app.repositories.journey.reflection_repository import ReflectionSourceRepository
@@ -23,7 +23,7 @@ def get_reflection_repository() -> ReflectionSourceRepository:
 
 @router.get("/", response_model=List[ReflectionSource])
 async def get_reflection_sources(
-    user_info: dict = Depends(get_current_user),
+    user_info: dict = Depends(get_current_user_clerk_id),
     reflection_repo: ReflectionSourceRepository = Depends(get_reflection_repository)
 ):
     """
@@ -53,7 +53,7 @@ async def get_reflection_sources(
 @router.post("/upload", response_model=ReflectionSource)
 async def upload_reflection_document(
     file: UploadFile = File(...),
-    user_info: dict = Depends(get_current_user),
+    user_info: dict = Depends(get_current_user_clerk_id),
     reflection_repo: ReflectionSourceRepository = Depends(get_reflection_repository)
 ):
     """
@@ -171,7 +171,7 @@ async def upload_reflection_document(
 
 @router.get("/insights", response_model=dict)
 async def get_insights(
-    user_info: dict = Depends(get_current_user),
+    user_info: dict = Depends(get_current_user_clerk_id),
     reflection_repo: ReflectionSourceRepository = Depends(get_reflection_repository)
 ):
     """
@@ -328,7 +328,7 @@ async def _create_insights_from_analysis(
 
 @router.get("/journey/feed", response_model=JourneyFeedResponse)
 async def get_journey_feed(
-    user_info: dict = Depends(get_current_user),
+    user_info: dict = Depends(get_current_user_clerk_id),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100)
 ):
