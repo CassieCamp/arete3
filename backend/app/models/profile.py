@@ -80,7 +80,6 @@ class Profile(BaseModel):
     )
     
     id: Optional[PyObjectId] = Field(default=None, alias="_id")
-    user_id: str  # Foreign key to User
     clerk_user_id: str  # Clerk user ID for direct integration
     first_name: str
     last_name: str

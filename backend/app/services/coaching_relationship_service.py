@@ -1,17 +1,17 @@
 from typing import Optional
 from app.models.coaching_relationship import CoachingRelationship, RelationshipStatus
 from app.repositories.coaching_relationship_repository import CoachingRelationshipRepository
-from app.repositories.user_repository import UserRepository
+from app.services.user_service import UserService
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 class CoachingRelationshipService:
-    def __init__(self, coaching_relationship_repository: CoachingRelationshipRepository, user_repository: UserRepository):
+    def __init__(self, coaching_relationship_repository: CoachingRelationshipRepository, user_service: UserService):
         """Initialize the service with repository dependencies"""
         self.coaching_relationship_repository = coaching_relationship_repository
-        self.user_repository = user_repository
+        self.user_service = user_service
 
     async def create_connection_request(self, coach_user_id: str, client_email: str) -> CoachingRelationship:
         """
@@ -32,19 +32,19 @@ class CoachingRelationshipService:
         
         try:
             # Verify the coach user exists and has coach role
-            coach_user = await self.user_repository.get_user_by_clerk_id(coach_user_id)
+            coach_user = self.user_service.get_user(coach_user_id)
             if not coach_user:
                 logger.error(f"Coach user not found with ID: {coach_user_id}")
                 raise ValueError(f"Coach user with ID {coach_user_id} not found")
             
-            if not hasattr(coach_user, 'role') or coach_user.role != 'coach':
+            if coach_user.public_metadata.get("primary_role") != 'coach':
                 logger.error(f"User {coach_user_id} is not a coach")
                 raise ValueError("Only coaches can initiate connection requests")
             
             logger.info(f"Found coach user: {coach_user.id}")
             
             # Find the client user by email
-            client_user = await self.user_repository.get_user_by_email(client_email)
+            client_user = self.user_service.get_user_by_email(client_email)
             if not client_user:
                 logger.error(f"Client user not found with email: {client_email}")
                 raise ValueError(f"User with email {client_email} not found")
@@ -53,7 +53,7 @@ class CoachingRelationshipService:
             
             # Check if a relationship already exists between these users
             existing_relationship = await self.coaching_relationship_repository.get_relationship_between_users(
-                coach_user_id, client_user.clerk_user_id
+                coach_user_id, client_user.id
             )
             
             if existing_relationship:

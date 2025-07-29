@@ -12,25 +12,36 @@ router = APIRouter()
 async def get_current_user(
     user_info: dict = Depends(org_optional)
 ):
-    """Get current user's basic information"""
+    """Get current user's basic information from Clerk"""
     from app.services.user_service import UserService
     
     clerk_user_id = user_info['clerk_user_id']
     user_service = UserService()
-    user = await user_service.get_user_by_clerk_id(clerk_user_id)
+    user = user_service.get_user(clerk_user_id)
     
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="User not found in Clerk"
         )
     
+    def get_primary_email(user):
+        if not user or not user.email_addresses:
+            return None
+        for email in user.email_addresses:
+            if email.id == user.primary_email_address_id:
+                return email.email_address
+        return user.email_addresses[0].email_address
+
     return {
-        "id": str(user.id),
-        "clerk_user_id": user.clerk_user_id,
-        "email": user.email,
-        "role": user.role,
-        "created_at": user.created_at.isoformat()
+        "clerk_user_id": user.id,
+        "email": get_primary_email(user),
+        "primary_role": user.public_metadata.get("primary_role", "member"),
+        "organization_roles": user.public_metadata.get("organization_roles", {}),
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "image_url": user.image_url,
+        "created_at": datetime.fromtimestamp(user.created_at / 1000).isoformat()
     }
 
 
@@ -138,28 +149,55 @@ async def check_coach_authorization(
     
     clerk_user_id = user_info['clerk_user_id']
     user_service = UserService()
-    user = await user_service.get_user_by_clerk_id(clerk_user_id)
+    user = user_service.get_user(clerk_user_id)
     
     logger.info(f"Checking authorization for clerk_user_id: {clerk_user_id}")
     logger.info(f"User found: {user is not None}")
+
+    def get_primary_email(user):
+        if not user or not user.email_addresses:
+            return None
+        for email in user.email_addresses:
+            if email.id == user.primary_email_address_id:
+                return email.email_address
+        return user.email_addresses[0].email_address
+
+    user_email = get_primary_email(user)
+
     if user:
-        logger.info(f"User email: {user.email}")
+        logger.info(f"User email: {user_email}")
         logger.info(f"Whitelist emails: {settings.coach_whitelist_emails_list}")
-        logger.info(f"Email in whitelist: {user.email.lower() in settings.coach_whitelist_emails_list}")
+        logger.info(f"Email in whitelist: {user_email.lower() in settings.coach_whitelist_emails_list}")
     
-    if not user or not user.email:
+    if not user or not user_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"User email not found for clerk_user_id: {clerk_user_id}"
         )
     
-    is_authorized = user.email.lower() in settings.coach_whitelist_emails_list
+    is_authorized = user_email.lower() in settings.coach_whitelist_emails_list
     
     return {
         "authorized": is_authorized,
-        "email": user.email,
+        "email": user_email,
         "message": "Authorized to create coach profile" if is_authorized else "Not authorized for coach access"
     }
+
+@router.get("/all")
+async def get_all_users():
+    """Get all users from Clerk"""
+    from app.services.user_service import UserService
+    
+    user_service = UserService()
+    users = user_service.get_all_users()
+    
+    if not users:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No users found in Clerk"
+        )
+    
+    return users
 
 
 @router.post("/access/verify-coach-for-client")
@@ -186,7 +224,7 @@ async def verify_coach_for_client(
     
     # Check if coach actually exists in our system
     user_service = UserService()
-    coach_user = await user_service.get_user_by_email(coach_email)
+    coach_user = user_service.get_user_by_email(coach_email)
     
     if not coach_user:
         raise HTTPException(
@@ -196,7 +234,7 @@ async def verify_coach_for_client(
     
     # Check if coach has a profile
     profile_service = ProfileService()
-    coach_profile = await profile_service.get_profile_by_clerk_id(coach_user.clerk_user_id)
+    coach_profile = await profile_service.get_profile_by_clerk_id(coach_user.id)
     
     if not coach_profile or not coach_profile.coach_data:
         raise HTTPException(
@@ -212,70 +250,4 @@ async def verify_coach_for_client(
     }
 
 
-@router.post("/dev/create-current-user")
-async def create_current_user_manually(
-    user_info: dict = Depends(org_optional)
-):
-    """Development endpoint to manually create current user in database"""
-    from app.services.user_service import UserService
-    import clerk
-    
-    clerk_user_id = user_info['clerk_user_id']
-    user_service = UserService()
-    
-    # Check if user already exists
-    existing_user = await user_service.get_user_by_clerk_id(clerk_user_id)
-    if existing_user:
-        return {
-            "success": True,
-            "message": "User already exists",
-            "user_id": str(existing_user.id),
-            "email": existing_user.email,
-            "clerk_user_id": existing_user.clerk_user_id
-        }
-    
-    # Get user email from Clerk
-    try:
-        clerk_client = clerk.Client(api_key=settings.clerk_secret_key)
-        clerk_user = clerk_client.users.get(clerk_user_id)
-        
-        # Get primary email
-        primary_email = None
-        if clerk_user.email_addresses:
-            for email in clerk_user.email_addresses:
-                if email.id == clerk_user.primary_email_address_id:
-                    primary_email = email.email_address
-                    break
-            
-            # Fallback to first email if primary not found
-            if not primary_email:
-                primary_email = clerk_user.email_addresses[0].email_address
-        
-        if not primary_email:
-            return {
-                "success": False,
-                "message": "No email found for user in Clerk"
-            }
-        
-        # Create user in our database
-        user = await user_service.create_user_from_clerk(
-            clerk_user_id=clerk_user_id,
-            email=primary_email,
-            role="client"  # Default role
-        )
-        
-        return {
-            "success": True,
-            "message": "User created successfully",
-            "user_id": str(user.id),
-            "email": user.email,
-            "clerk_user_id": user.clerk_user_id
-        }
-        
-    except Exception as e:
-        logger.error(f"Error fetching user from Clerk: {e}")
-        return {
-            "success": False,
-            "message": f"Error creating user: {str(e)}"
-        }
 

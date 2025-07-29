@@ -223,16 +223,7 @@ async def get_current_user_clerk_id(
                 logger.error(f"❌ Session validation error for {clerk_user_id}: {validation_error}")
                 # Continue with authentication even if validation fails
             
-            # Check if user exists in backend database and sync if not
-            user_service = UserService()
-            existing_user = await user_service.get_user_by_clerk_id(clerk_user_id)
-            
-            if not existing_user:
-                logger.warning(f"⚠️ User {clerk_user_id} not in DB, attempting sync from Clerk.")
-                await user_service.sync_user_from_clerk(clerk_user_id, primary_role)
-            else:
-                logger.info(f"✅ User {clerk_user_id} found in backend database: {existing_user.id}")
-            
+            # The user is authenticated by Clerk, no need to check our database.
             return {
                 "clerk_user_id": clerk_user_id,
                 "primary_role": primary_role,
@@ -269,41 +260,6 @@ async def get_current_user_clerk_id_optional(
         return None
 
 
-async def get_current_user(
-    user_info: Dict[str, Any] = Depends(get_current_user_clerk_id)
-) -> dict:
-    """
-    Get current user information including user_id from backend database
-    """
-    try:
-        clerk_user_id = user_info["clerk_user_id"]
-        user_service = UserService()
-        user = await user_service.get_user_by_clerk_id(clerk_user_id)
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found in backend database"
-            )
-        
-        return {
-            "user_id": str(user.id),
-            "clerk_user_id": clerk_user_id,
-            "email": user.email,
-            "primary_role": user_info["primary_role"],  # Always use Clerk JWT claims
-            "organization_roles": user_info["organization_roles"]  # Always use Clerk JWT claims
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error getting current user: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get user information"
-        )
-
-
 def get_analysis_service() -> AnalysisService:
     """
     Get AnalysisService instance with required dependencies
@@ -331,22 +287,29 @@ async def get_current_user_websocket(websocket: WebSocket, token: str = Query(..
         
         logger.info(f"🔍 Authenticated WebSocket user with Clerk ID: {clerk_user_id}")
         
-        # Get user from database
-        user = await user_service.get_user_by_clerk_id(clerk_user_id)
+        # Get user from Clerk
+        user = user_service.get_user(clerk_user_id)
         if not user:
             logger.error(f"User not found for clerk_id: {clerk_user_id}")
             raise HTTPException(status_code=401, detail="User not found")
+
+        def get_primary_email(user):
+            if not user or not user.email_addresses:
+                return None
+            for email in user.email_addresses:
+                if email.id == user.primary_email_address_id:
+                    return email.email_address
+            return user.email_addresses[0].email_address
         
-        logger.info(f"✅ WebSocket User {clerk_user_id} found in backend database: {user.id}")
+        logger.info(f"✅ WebSocket User {clerk_user_id} found via Clerk")
         
         # Extract role information from JWT token
         public_metadata = decoded_token.get("publicMetadata", {})
         primary_role = public_metadata.get("primary_role", "member")
         
         return {
-            "user_id": str(user.id),  # Fixed: Use backend user ID consistently
             "clerk_user_id": clerk_user_id,
-            "email": user.email,
+            "email": get_primary_email(user),
             "primary_role": primary_role  # Always use Clerk JWT claims
         }
         

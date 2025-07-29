@@ -6,7 +6,6 @@ from app.services.coaching_relationship_service import CoachingRelationshipServi
 from app.services.user_service import UserService
 from app.repositories.coaching_relationship_repository import CoachingRelationshipRepository
 from app.repositories.coaching_interest_repository import CoachingInterestRepository
-from app.repositories.user_repository import UserRepository
 from app.api.v1.deps import org_optional
 import logging
 
@@ -18,8 +17,8 @@ router = APIRouter()
 def get_coaching_relationship_service() -> CoachingRelationshipService:
     """Dependency to get coaching relationship service"""
     coaching_relationship_repository = CoachingRelationshipRepository()
-    user_repository = UserRepository()
-    return CoachingRelationshipService(coaching_relationship_repository, user_repository)
+    user_service = UserService()
+    return CoachingRelationshipService(coaching_relationship_repository, user_service)
 
 
 def get_user_service() -> UserService:
@@ -27,20 +26,28 @@ def get_user_service() -> UserService:
     return UserService()
 
 
-async def convert_relationship_to_response(relationship, user_repository: UserRepository):
+def convert_relationship_to_response(relationship, user_service: UserService):
     """Convert CoachingRelationship model to response schema with user emails"""
     from app.schemas.coaching_relationship import CoachingRelationshipResponse
     
     # Fetch coach and client emails
-    coach_user = await user_repository.get_user_by_clerk_id(relationship.coach_user_id)
-    client_user = await user_repository.get_user_by_clerk_id(relationship.client_user_id)
+    coach_user = user_service.get_user(relationship.coach_user_id)
+    client_user = user_service.get_user(relationship.client_user_id)
     
+    def get_primary_email(user):
+        if not user or not user.email_addresses:
+            return None
+        for email in user.email_addresses:
+            if email.id == user.primary_email_address_id:
+                return email.email_address
+        return user.email_addresses[0].email_address
+
     return CoachingRelationshipResponse(
         id=str(relationship.id),
         coach_user_id=relationship.coach_user_id,
         client_user_id=relationship.client_user_id,
-        coach_email=coach_user.email if coach_user else None,
-        client_email=client_user.email if client_user else None,
+        coach_email=get_primary_email(coach_user),
+        client_email=get_primary_email(client_user),
         status=relationship.status,
         created_at=relationship.created_at,
         updated_at=relationship.updated_at
@@ -62,21 +69,21 @@ async def get_member_coaching_relationships(
     try:
         # Get relationships where the current user is the member/client
         relationships_data = await service.get_user_relationships(current_user_id)
-        user_repository = UserRepository()
+        user_service = UserService()
         
         # Convert relationships to response format with user emails
         pending_responses = []
         for rel in relationships_data["pending"]:
             # Only include relationships where current user is the client/member
             if rel.client_user_id == current_user_id:
-                response = await convert_relationship_to_response(rel, user_repository)
+                response = convert_relationship_to_response(rel, user_service)
                 pending_responses.append(response)
             
         active_responses = []
         for rel in relationships_data["active"]:
             # Only include relationships where current user is the client/member
             if rel.client_user_id == current_user_id:
-                response = await convert_relationship_to_response(rel, user_repository)
+                response = convert_relationship_to_response(rel, user_service)
                 active_responses.append(response)
         
         return UserRelationshipsResponse(
@@ -135,7 +142,7 @@ async def get_session_settings(
     logger.info(f"Getting session settings for user {current_user_id}")
     
     try:
-        user = await user_service.get_user_by_clerk_id(current_user_id)
+        user = user_service.get_user(current_user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -143,7 +150,7 @@ async def get_session_settings(
             )
         
         return {
-            "session_auto_send_context": user.session_auto_send_context
+            "session_auto_send_context": user.public_metadata.get("session_auto_send_context", False)
         }
         
     except HTTPException:
@@ -170,8 +177,13 @@ async def update_session_settings(
     logger.info(f"Updating session settings for user {current_user_id}: {settings}")
     
     try:
-        updated_user = await user_service.update_user_session_settings(
-            current_user_id, settings.session_auto_send_context
+        from clerk_backend_api import Clerk
+        clerk_client = Clerk()
+        updated_user = clerk_client.users.update_user(
+            user_id=current_user_id,
+            public_metadata={
+                "session_auto_send_context": settings.session_auto_send_context
+            }
         )
         
         if not updated_user:
@@ -183,7 +195,7 @@ async def update_session_settings(
         logger.info(f"✅ Successfully updated session settings for user {current_user_id}")
         return {
             "message": "Session settings updated successfully",
-            "session_auto_send_context": updated_user.session_auto_send_context
+            "session_auto_send_context": updated_user.public_metadata.get("session_auto_send_context")
         }
         
     except HTTPException:
