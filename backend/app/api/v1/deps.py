@@ -207,6 +207,14 @@ async def get_current_user_clerk_id(
                     org["id"]: {"role": org["role"]} for org in user_orgs
                 }
                 
+                # Extract user's first and last name from organization data
+                first_name = ""
+                last_name = ""
+                if user_orgs:
+                    public_user_data = user_orgs[0].get("public_user_data", {})
+                    first_name = public_user_data.get("first_name", "")
+                    last_name = public_user_data.get("last_name", "")
+
                 # Determine primary_role based on the most privileged role found
                 is_coach_or_admin = any(
                     org["role"] in ["admin", "coach"] for org in user_orgs
@@ -248,7 +256,9 @@ async def get_current_user_clerk_id(
             return {
                 "clerk_user_id": clerk_user_id,
                 "primary_role": primary_role,
-                "organization_roles": organization_roles
+                "organization_roles": organization_roles,
+                "first_name": first_name,
+                "last_name": last_name
             }
             
         except HTTPException:

@@ -1,9 +1,15 @@
+from datetime import datetime
+from typing import Any, Dict
+
 from fastapi import APIRouter, Depends, HTTPException, status
+
 from app.api.v1.deps import org_optional
-from app.services.profile_service import ProfileService
-from app.schemas.profile import ProfileResponse, ProfileCreateRequest, ProfileUpdateRequest
 from app.core.config import settings
-from typing import Dict, Any
+from app.models.profile import ClientData, CoachData
+from app.schemas.profile import (ProfileCreateRequest, ProfileResponse,
+                                 ProfileUpdateRequest)
+from app.services.profile_service import ProfileService
+from app.services.user_service import UserService
 
 router = APIRouter()
 
@@ -13,7 +19,6 @@ async def get_current_user(
     user_info: dict = Depends(org_optional)
 ):
     """Get current user's basic information from Clerk"""
-    from app.services.user_service import UserService
     
     clerk_user_id = user_info['clerk_user_id']
     user_service = UserService()
@@ -49,17 +54,25 @@ async def get_current_user(
 async def get_user_profile(
     user_info: dict = Depends(org_optional)
 ):
-    """Get current user's profile"""
+    """Get current user's profile. If not found, a new one is created."""
     clerk_user_id = user_info['clerk_user_id']
     profile_service = ProfileService()
     
     profile = await profile_service.get_profile_by_clerk_id(clerk_user_id)
-    if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Profile not found"
-        )
     
+    if not profile:
+        # Profile not found, create it using data from the user_info dependency
+        primary_role = user_info.get("primary_role")
+        
+        profile_data = {
+            "first_name": user_info.get("first_name", ""),
+            "last_name": user_info.get("last_name", ""),
+            "coach_data": CoachData().dict() if primary_role == "coach" else None,
+            "client_data": ClientData().dict() if primary_role == "client" else None,
+        }
+        
+        profile = await profile_service.create_profile(clerk_user_id, profile_data)
+
     return ProfileResponse(
         id=str(profile.id),
         user_id=profile.clerk_user_id,
@@ -68,6 +81,7 @@ async def get_user_profile(
         last_name=profile.last_name,
         coach_data=profile.coach_data.dict() if profile.coach_data else None,
         client_data=profile.client_data.dict() if profile.client_data else None,
+        primary_organization_id=getattr(profile, 'primary_organization_id', None),
         created_at=profile.created_at.isoformat(),
         updated_at=profile.updated_at.isoformat()
     )
@@ -143,7 +157,6 @@ async def check_coach_authorization(
     user_info: dict = Depends(org_optional)
 ):
     """Check if current user is authorized to be a coach"""
-    from app.services.user_service import UserService
     import logging
     
     logger = logging.getLogger(__name__)
@@ -187,7 +200,6 @@ async def check_coach_authorization(
 @router.get("/all")
 async def get_all_users():
     """Get all users from Clerk"""
-    from app.services.user_service import UserService
     
     user_service = UserService()
     users = user_service.get_all_users()
@@ -206,7 +218,6 @@ async def verify_coach_for_client(
     request: Dict[str, Any]
 ):
     """Verify that a coach exists and is authorized (for client signup)"""
-    from app.services.user_service import UserService
     
     # Extract coach_email from request body
     coach_email = request.get("coach_email")
