@@ -15,7 +15,13 @@ class UserService:
         Get user data directly from Clerk.
         """
         try:
-            return self.clerk_client.users.get_user(user_id)
+            # Note: The clerk-backend-api has inconsistent method names.
+            # While get_user_list() works for emails, it fails for user_id.
+            # The list() method is the correct one for querying by user_id.
+            users = self.clerk_client.users.list(user_id=[user_id])
+            if users and len(users) > 0:
+                return users[0]
+            return None
         except Exception as e:
             logger.error(f"Error fetching user from Clerk: {e}")
             return None
@@ -26,9 +32,9 @@ class UserService:
         Note: This is a simplified example. In a real application, you might need to handle multiple users with the same email.
         """
         try:
-            users = self.clerk_client.users.get_user_list(email_address=[email])
-            if users and len(users.data) > 0:
-                return users.data[0]
+            users = self.clerk_client.users.list(email_address=[email])
+            if users and len(users) > 0:
+                return users[0]
             return None
         except Exception as e:
             logger.error(f"Error fetching user by email from Clerk: {e}")

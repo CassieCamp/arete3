@@ -4,8 +4,8 @@ from typing import List, Optional, Dict, Any
 
 class CoachDataSchema(BaseModel):
     specialties: List[str]
-    experience: int
-    philosophy: str
+    experience: Optional[int] = None
+    philosophy: Optional[str] = None
 
 
 class ClientDataSchema(BaseModel):

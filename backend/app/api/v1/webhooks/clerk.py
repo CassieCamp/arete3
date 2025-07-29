@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException, status
 from app.services.user_service import UserService
+from app.services.profile_service import ProfileService
 from app.services.clerk_organization_service import ClerkOrganizationService
 from app.core.config import settings
 from app.db.mongodb import get_database
@@ -86,9 +87,19 @@ async def handle_clerk_webhook(request: Request):
             )
         
         user_service = UserService()
+        profile_service = ProfileService()
         clerk_org_service = ClerkOrganizationService()
         
-        if event_type == "organization.created":
+        if event_type == "session.created":
+            logger.info("Processing session.created event")
+            user_id = data.get("user_id")
+            if user_id:
+                logger.info(f"Attempting to sync role for user {user_id} on session creation.")
+                await profile_service.sync_user_role_from_clerk(user_id)
+            else:
+                logger.warning("No user_id found in session.created event payload.")
+
+        elif event_type == "organization.created":
             # Handle new organization creation
             logger.info("Processing organization.created event")
             
@@ -119,6 +130,15 @@ async def handle_clerk_webhook(request: Request):
             logger.info(f"Organization deleted: {org_name} (ID: {org_id})")
             # Additional cleanup logic can be added here if needed
         
+        elif event_type == "user.updated":
+            logger.info("Processing user.updated event")
+            user_id = data.get("id")
+            if user_id:
+                logger.info(f"Attempting to sync role for user {user_id} on user update.")
+                await profile_service.sync_user_role_from_clerk(user_id)
+            else:
+                logger.warning("No user_id found in user.updated event payload.")
+
         else:
             logger.info(f"Unhandled event type: {event_type}")
         

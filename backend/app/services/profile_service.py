@@ -2,6 +2,7 @@ from typing import Optional, Dict, Any
 from app.models.profile import Profile, CoachData, ClientData
 from app.repositories.profile_repository import ProfileRepository
 from app.services.user_service import UserService
+from app.services.clerk_organization_service import ClerkOrganizationService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,15 +12,11 @@ class ProfileService:
     def __init__(self):
         self.profile_repository = ProfileRepository()
         self.user_service = UserService()
+        self.clerk_org_service = ClerkOrganizationService()
 
     async def create_profile(self, clerk_user_id: str, profile_data: Dict[str, Any]) -> Profile:
         """Create a new profile for a user"""
         try:
-            # Get user by Clerk ID
-            user = self.user_service.get_user(clerk_user_id)
-            if not user:
-                raise ValueError(f"User with Clerk ID {clerk_user_id} not found")
-
             # Check if profile already exists
             existing_profile = await self.profile_repository.get_profile_by_clerk_id(clerk_user_id)
             if existing_profile:
@@ -30,10 +27,9 @@ class ProfileService:
             coach_data = None
             client_data = None
             
-            primary_role = user.public_metadata.get("primary_role")
-            if primary_role == "coach" and "coach_data" in profile_data:
+            if "coach_data" in profile_data and profile_data["coach_data"] is not None:
                 coach_data = CoachData(**profile_data["coach_data"])
-            elif primary_role == "client" and "client_data" in profile_data:
+            elif "client_data" in profile_data and profile_data["client_data"] is not None:
                 client_data = ClientData(**profile_data["client_data"])
 
             # Create profile
@@ -71,10 +67,6 @@ class ProfileService:
     async def update_profile(self, clerk_user_id: str, update_data: Dict[str, Any]) -> Optional[Profile]:
         """Update profile by Clerk user ID"""
         try:
-            user = self.user_service.get_user(clerk_user_id)
-            if not user:
-                raise ValueError(f"User with Clerk ID {clerk_user_id} not found")
-
             # Validate and prepare update data
             validated_data = {}
             
@@ -85,7 +77,11 @@ class ProfileService:
                 validated_data["last_name"] = update_data["last_name"]
 
             # Role-specific data
-            primary_role = user.public_metadata.get("primary_role")
+            organizations = await self.clerk_org_service.get_user_organizations(clerk_user_id)
+            primary_role = None
+            if organizations:
+                primary_role = organizations[0].get("role")
+
             if primary_role == "coach" and "coach_data" in update_data:
                 coach_data = CoachData(**update_data["coach_data"])
                 validated_data["coach_data"] = coach_data.dict()
@@ -120,4 +116,60 @@ class ProfileService:
             return await self.profile_repository.profile_exists_by_clerk_id(clerk_user_id)
         except Exception as e:
             logger.error(f"Error checking profile existence: {e}")
+            raise
+
+    async def sync_user_role_from_clerk(self, clerk_user_id: str) -> Optional[Profile]:
+        """Synchronize user role from Clerk organization memberships."""
+        try:
+            organizations = await self.clerk_org_service.get_user_organizations(clerk_user_id)
+            
+            # Determine primary role: 'coach' takes precedence
+            primary_role = "member" # Default role
+            if any(org.get("role") == "coach" for org in organizations):
+                primary_role = "coach"
+            elif organizations:
+                primary_role = organizations[0].get("role", "member")
+
+            # Update Clerk user's public metadata
+            clerk_user = self.user_service.get_user(clerk_user_id)
+            if clerk_user:
+                updated_metadata = clerk_user.public_metadata or {}
+                updated_metadata["primary_role"] = primary_role
+                
+                # Also update organization roles in metadata
+                org_roles = {org["id"]: {"role": org["role"]} for org in organizations}
+                updated_metadata["organization_roles"] = org_roles
+
+                from clerk_backend_api.services.users import Users
+                Users().update_user(user_id=clerk_user_id, public_metadata=updated_metadata)
+                logger.info(f"Updated Clerk public_metadata for user {clerk_user_id} with role '{primary_role}' and orgs.")
+
+            # Prepare data for local profile update
+            update_data = {
+                "coach_data": None,
+                "client_data": None,
+            }
+            if primary_role == "coach":
+                update_data["coach_data"] = {}
+            elif primary_role == "client":
+                update_data["client_data"] = {}
+
+            # Atomically update the local profile
+            updated_profile = await self.profile_repository.update_profile_by_clerk_id(clerk_user_id, update_data)
+            if updated_profile:
+                logger.info(f"Successfully synced local profile for user {clerk_user_id} to '{primary_role}'.")
+                return updated_profile
+            else:
+                logger.info(f"Profile for user {clerk_user_id} not found. Creating a new profile.")
+                public_user_data = organizations[0].get("public_user_data", {}) if organizations else {}
+                profile_data = {
+                    "first_name": public_user_data.get("first_name", ""),
+                    "last_name": public_user_data.get("last_name", ""),
+                    "coach_data": CoachData().dict() if primary_role == "coach" else None,
+                    "client_data": ClientData().dict() if primary_role == "client" else None,
+                }
+                return await self.create_profile(clerk_user_id, profile_data)
+
+        except Exception as e:
+            logger.error(f"Error syncing user role from Clerk for user {clerk_user_id}: {e}")
             raise

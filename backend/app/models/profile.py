@@ -25,14 +25,14 @@ class PyObjectId(ObjectId):
 
 
 class CoachData(BaseModel):
-    specialties: List[str]
-    experience: int
-    philosophy: str
+    specialties: List[str] = Field(default_factory=list)
+    experience: Optional[int] = None
+    philosophy: Optional[str] = None
 
 
 class ClientData(BaseModel):
-    background: str
-    challenges: List[str]
+    background: Optional[str] = None
+    challenges: List[str] = Field(default_factory=list)
 
 
 class IdentityFoundation(BaseModel):

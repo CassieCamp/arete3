@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import apiClient from '@/lib/apiClient';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,7 +47,7 @@ interface CoachDashboardData {
 }
 
 export default function CoachDashboard() {
-  const { user, isAuthenticated, getAuthToken } = useAuth();
+  const { user, isAuthenticated, getAuthToken, currentOrganization, organizationRoles } = useAuth();
   const [dashboardData, setDashboardData] = useState<CoachDashboardData | null>(null);
   const [resources, setResources] = useState<CoachResource[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,10 +55,11 @@ export default function CoachDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("CoachDashboard: isAuthenticated:", isAuthenticated, "user:", !!user, "organizationRoles:", organizationRoles);
     if (isAuthenticated && user) {
       loadCoachData();
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, organizationRoles]);
 
   const loadCoachData = async () => {
     try {
@@ -70,31 +72,14 @@ export default function CoachDashboard() {
       }
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const [clientsResponse, resourcesResponse] = await Promise.all([
-        fetch(`${apiUrl}/api/v1/coach/clients`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }),
-        fetch(`${apiUrl}/api/v1/coach/resources`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        })
+      const orgId = currentOrganization || undefined;
+      
+      console.log("CoachDashboard: Loading data with orgId:", orgId);
+
+      const [clientsData, resourcesData] = await Promise.all([
+        apiClient.get("/coach/clients", token, orgId),
+        apiClient.get("/coach/resources", token, orgId),
       ]);
-
-      if (!clientsResponse.ok) {
-        throw new Error(`Failed to fetch clients: ${clientsResponse.statusText}`);
-      }
-
-      if (!resourcesResponse.ok) {
-        throw new Error(`Failed to fetch resources: ${resourcesResponse.statusText}`);
-      }
-
-      const clientsData = await clientsResponse.json();
-      const resourcesData = await resourcesResponse.json();
 
       setDashboardData(clientsData);
       setResources(resourcesData.resources || []);

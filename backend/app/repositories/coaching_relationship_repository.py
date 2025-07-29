@@ -483,3 +483,51 @@ class CoachingRelationshipRepository:
             logger.error(f"Exception type: {type(e)}")
             logger.error(f"Traceback: {traceback.format_exc()}")
             raise
+
+    async def get_relationships_for_coach(self, coach_user_id: str) -> List[CoachingRelationship]:
+        """Get all coaching relationships where the user is the coach"""
+        logger.info(f"=== CoachingRelationshipRepository.get_relationships_for_coach called ===")
+        logger.info(f"Searching for relationships for coach: {coach_user_id}")
+        
+        try:
+            db = get_database()
+            if db is None:
+                logger.error("Database is None")
+                raise Exception("Database connection is None")
+            
+            # Find relationships where user is the coach
+            # Support both new and legacy field names
+            query = {
+                "$or": [
+                    {"coach_id": coach_user_id},  # New field
+                    {"coach_user_id": coach_user_id}  # Legacy field
+                ]
+            }
+            
+            logger.info(f"Query: {query}")
+            
+            cursor = db[self.collection_name].find(query)
+            relationship_docs = await cursor.to_list(length=None)
+            
+            logger.info(f"Found {len(relationship_docs)} relationships for coach")
+            
+            relationships = []
+            for doc in relationship_docs:
+                # Convert ObjectId to string for Pydantic compatibility
+                if "_id" in doc and doc["_id"]:
+                    doc["_id"] = str(doc["_id"])
+                
+                # Handle backward compatibility for legacy fields
+                self._ensure_field_compatibility(doc)
+                
+                relationships.append(CoachingRelationship(**doc))
+            
+            logger.info(f"✅ Successfully retrieved {len(relationships)} relationships for coach")
+            return relationships
+            
+        except Exception as e:
+            logger.error(f"❌ Error in get_relationships_for_coach: {e}")
+            logger.error(f"Exception type: {type(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise

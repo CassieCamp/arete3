@@ -62,11 +62,12 @@ async def get_user_profile(
     
     return ProfileResponse(
         id=str(profile.id),
-        user_id=profile.user_id,
+        user_id=profile.clerk_user_id,
+        clerk_user_id=profile.clerk_user_id,
         first_name=profile.first_name,
         last_name=profile.last_name,
-        coach_data=profile.coach_data,
-        client_data=profile.client_data,
+        coach_data=profile.coach_data.dict() if profile.coach_data else None,
+        client_data=profile.client_data.dict() if profile.client_data else None,
         created_at=profile.created_at.isoformat(),
         updated_at=profile.updated_at.isoformat()
     )

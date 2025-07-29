@@ -21,7 +21,7 @@ interface User {
   firstName: string;
   lastName: string;
   email: string;
-  primaryRole: "admin" | "coach" | "member";
+  primaryRole: "admin" | "coach" | "member" | "client";
   organizationRoles: OrganizationRole[];
   permissions: string[];
   clerkId: string;
@@ -35,6 +35,7 @@ interface AuthContextType {
   roleLoaded: boolean;
   currentRole: string | null;
   currentOrganization: string | null;
+  organizationRoles: OrganizationRole[];
   login: (user: User) => void;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
@@ -64,38 +65,75 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     useOrganizationList();
 
   // Compute derived values using useMemo to prevent unnecessary recalculations
-  const user = useMemo((): User | null => {
-    if (!isSignedIn || !clerkUser || !userLoaded) return null;
+  const [user, setUser] = React.useState<User | null>(null);
+  const [profileLoaded, setProfileLoaded] = React.useState(false);
 
-    // Convert Clerk organization memberships to our format
-    const organizationRoles: OrganizationRole[] =
-      userMemberships?.data?.map((membership) => ({
-        organizationId: membership.organization.id,
-        organizationName: membership.organization.name,
-        role: membership.role,
-        orgType: "member", // Default for now - can be enhanced later
-        permissions: [], // Permissions can be derived from role and org type
-      })) || [];
+  React.useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (isSignedIn && clerkUser && userLoaded) {
+        console.log("AuthContext: Fetching user profile, membershipsLoaded:", membershipsLoaded, "userMemberships:", userMemberships);
+        setProfileLoaded(false);
+        const token = await getToken({ template: "default" });
+        if (token) {
+          try {
+            const orgId = organization?.id;
+            const headers: HeadersInit = {
+              Authorization: `Bearer ${token}`,
+            };
+            if (orgId) {
+              headers["X-Org-Id"] = orgId;
+            }
+            const response = await fetch("/api/v1/users/me/profile", {
+              headers,
+            });
+            if (response.ok) {
+              const profile = await response.json();
+              const primaryRole = profile.coach_data ? "coach" : "client";
+              console.log("USER IS LOGGED IN AS:", primaryRole);
 
-    console.log("Clerk User Public Metadata:", clerkUser.publicMetadata);
-    return {
-      id: clerkUser.id,
-      firstName: clerkUser.firstName || "",
-      lastName: clerkUser.lastName || "",
-      email: clerkUser.emailAddresses[0]?.emailAddress || "",
-      primaryRole:
-        (clerkUser.publicMetadata?.primary_role as
-          | "admin"
-          | "coach"
-          | "member") || "member",
-      organizationRoles,
-      permissions: [], // Can be computed from organization roles
-      clerkId: clerkUser.id,
-      // Legacy support
-      role:
-        clerkUser.publicMetadata?.primary_role === "coach" ? "coach" : "client",
+              // Only use organization data if it's loaded, otherwise use empty array
+              const organizationRoles: OrganizationRole[] =
+                (membershipsLoaded && userMemberships?.data)
+                  ? userMemberships.data.map((membership) => ({
+                      organizationId: membership.organization.id,
+                      organizationName: membership.organization.name,
+                      role: membership.role,
+                      orgType: "member", // Default for now - can be enhanced later
+                      permissions: [], // Permissions can be derived from role and org type
+                    }))
+                  : [];
+
+              setUser({
+                id: clerkUser.id,
+                firstName: profile.first_name,
+                lastName: profile.last_name,
+                email: clerkUser.emailAddresses[0]?.emailAddress || "",
+                primaryRole,
+                organizationRoles,
+                permissions: [], // This can be enhanced later
+                clerkId: clerkUser.id,
+                role: primaryRole,
+              });
+              setProfileLoaded(true);
+            } else {
+              console.error("Failed to fetch profile, status:", response.status);
+              setProfileLoaded(true);
+            }
+          } catch (error) {
+            console.error("Failed to fetch user profile:", error);
+            setProfileLoaded(true);
+          }
+        } else {
+          setProfileLoaded(true);
+        }
+      } else if (!isSignedIn) {
+        setUser(null);
+        setProfileLoaded(true);
+      }
     };
-  }, [isSignedIn, clerkUser, userLoaded, userMemberships]);
+
+    fetchUserProfile();
+  }, [isSignedIn, clerkUser, userLoaded, getToken]);
 
   // Compute current role and organization
   const currentRole = useMemo((): string | null => {
@@ -119,8 +157,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Check if role data is loaded
   const roleLoaded = useMemo(() => {
-    return userLoaded && membershipsLoaded;
-  }, [userLoaded, membershipsLoaded]);
+    return profileLoaded && (!!user || !isSignedIn);
+  }, [profileLoaded, user, isSignedIn]);
 
   // Helper functions
   const hasPermission = (permission: string): boolean => {
@@ -198,6 +236,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     roleLoaded,
     currentRole,
     currentOrganization,
+    organizationRoles: user?.organizationRoles || [],
     login,
     logout,
     hasPermission,

@@ -24,8 +24,8 @@ export default function RootLayout({
       publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
-      signInFallbackRedirectUrl="/member/journey"
-      signUpFallbackRedirectUrl="/profile/create/client"
+      afterSignInUrl="/"
+      signUpFallbackRedirectUrl="/profile/create"
     >
       <html lang="en">
         <body className={inter.className}>
